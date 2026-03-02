@@ -22,6 +22,21 @@ For the feature list and sprint status, see `Featureslist.md`.
 For agent orchestration strategy, see `Agents.md`.
 For sub-agent task assignments, see `SubAgents.md`.
 
+## ⚠️ AGENT INSTRUCTION — READ THIS FIRST
+
+**Before doing any work, every agent MUST read `/Users/dev/LifeOS/update.md` first.**
+
+`update.md` is the live build progress log. It contains:
+- Which phases and steps are complete
+- Which step is currently in progress
+- Which files have already been created
+- Key decisions made during the build (e.g. package manager choices, version pins)
+- Exact tasks remaining for the current step
+
+Do not re-create files that are already listed as complete in `update.md`.
+Do not start a step that is listed as pending without being explicitly instructed to.
+After completing any step, update `update.md` to reflect the new status.
+
 ---
 
 ## Tech Stack

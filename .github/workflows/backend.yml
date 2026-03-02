@@ -1,0 +1,37 @@
+name: Backend CI
+on:
+  push:
+    branches: [main, develop]
+    paths: ['backend/**']
+  pull_request:
+    branches: [main, develop]
+    paths: ['backend/**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install uv && uv pip install --system black ruff
+      - run: black --check backend/app
+      - run: ruff check backend/app
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: http://localhost
+      SUPABASE_SERVICE_ROLE_KEY: test_key
+      SUPABASE_JWT_SECRET: test_secret_key_that_is_at_least_32_chars
+      DATABASE_URL: sqlite+aiosqlite:///./test.db
+      RESEND_API_KEY: test_key
+      ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install uv && uv pip install --system -r backend/requirements.txt
+      - run: cd backend && pytest --cov=app --cov-report=term-missing
