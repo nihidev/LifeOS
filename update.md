@@ -1,116 +1,93 @@
 # LifeOS — Build Progress
 
 **Last Updated:** 2026-03-03
-**Current Phase:** Phase 4 (Expenses) ✅ COMPLETE. Next: Phase 5 (Resolutions).
+**Current Phase:** Phase 7 (Email) ✅ COMPLETE. Next: Phase 8 (Secondary Features).
 
 ---
 
 ## Phase 0 — Bootstrap ✅ COMPLETE
-
-### Step 1 — Scaffold ✅
-- Monorepo directories, `.gitignore`, `README.md`, `develop` branch
-
-### Step 2 — Backend Bootstrap ✅
-- FastAPI app, CORS, `/health`, JWT middleware, `get_db()`, `config.py`, `security.py`, `deps.py`
-
-### Step 3 — Alembic Setup ✅
-- `alembic.ini`, async `env.py`, `script.py.mako`
-
-### Step 4 — Frontend Bootstrap ✅
-- Next.js 16 App Router, Tailwind v4, shadcn/ui, TanStack Query, `lib/api.ts`, `lib/auth.ts`, auth pages, sidebar, dashboard layout
-
-### Step 5 — CI Setup ✅
-- `.github/workflows/backend.yml` + `frontend.yml`
+- Monorepo, `.gitignore`, FastAPI app, CORS, `/health`, JWT middleware, `get_db()`, `config.py`, `security.py`, `deps.py`
+- Alembic async setup, Next.js 16 App Router, Tailwind v4, shadcn/ui, TanStack Query
+- CI: `.github/workflows/backend.yml` + `frontend.yml`
 
 ---
 
 ## Phase 1 — Small Wins ✅ COMPLETE + E2E VERIFIED
-
-### Backend
-- Model, schemas, repository, service, routes, migration 001
-- Tests: 16/16 passing (incl. task creation + toggle)
-
-### Frontend
-- `types/small-win.ts`, `hooks/useSmallWins.ts`, `SmallWinForm.tsx`, `SmallWinList.tsx`, `small-wins/page.tsx`
-
-### E2E Verified ✅
-- Log win/task, edit, delete, date navigation, win count, future date task planning
+- Backend: model, schemas, repo, service, routes, migration 001 — 16/16 tests
+- Frontend: `types/small-win.ts`, `hooks/useSmallWins.ts`, `SmallWinForm.tsx`, `SmallWinList.tsx`, `small-wins/page.tsx`
+- E2E: log win/task, edit, delete, date nav, win count, future task planning
 
 ---
 
 ## Phase 2 — Workout Tracking ✅ COMPLETE + E2E VERIFIED
-
-### Backend
-- Model, schemas, repository, service, routes, migration 002
-- Tests: 16/16 passing (incl. multi-entry, delete, monthly dedup)
-
-### Frontend
-- `types/workout.ts`, `hooks/useWorkout.ts`, `WorkoutForm.tsx`, `StreakCard.tsx`, `MonthlyCalendar.tsx`, `workout/page.tsx`
-
-### E2E Verified ✅
-- Multi-entry per day, delete entries, streak, monthly summary, duration on calendar
+- Backend: model, schemas, repo, service, routes, migration 002 — 16/16 tests
+- Frontend: `types/workout.ts`, `hooks/useWorkout.ts`, `WorkoutForm.tsx`, `StreakCard.tsx`, `MonthlyCalendar.tsx`, `workout/page.tsx`
+- E2E: multi-entry per day, delete, streak, monthly summary, duration on calendar
 
 ---
 
 ## Phase 3 — Self Assessment ✅ COMPLETE + E2E VERIFIED
-
-### Backend
-- Model, schemas, repository, service, routes, migration 003
-- Tests: 12/12 passing
-
-### Frontend
-- `types/self-assessment.ts`, `hooks/useSelfAssessment.ts`, `AssessmentForm.tsx`, `ScoreHistory.tsx`, `self-assessment/page.tsx`
-
-### E2E Verified ✅
-- Yes/No toggle, required note on No, history chart
+- Backend: model, schemas, repo, service, routes, migration 003 — 12/12 tests
+- Frontend: `types/self-assessment.ts`, `hooks/useSelfAssessment.ts`, `AssessmentForm.tsx`, `ScoreHistory.tsx`, `self-assessment/page.tsx`
+- E2E: Yes/No toggle, required note on No, history chart
 
 ---
 
-## Post-Phase Enhancements ✅ (commit 09c2b3c, 2026-03-03)
+## Post-Phase Enhancements ✅ (2026-03-03)
 
 ### Small Wins — Tasks feature
 - Migration 004: `entry_type TEXT DEFAULT 'win'`, `completed BOOLEAN NULL`
 - Dual-mode form: Log Win (today/past) | Log Task (future dates: task-only)
 - Trophy icon (amber) for wins + completed tasks; Square icon for incomplete tasks
-- Clicking icon toggles task completion
 - Win count = wins + completed tasks only (pending tasks excluded)
-- Future date navigation enabled for task pre-planning
 
 ### Workout — Multi-entry per day
 - Migration 005: dropped `uq_workouts_user_date` unique constraint
-- `GET /workouts/` returns `list[WorkoutResponse]`; `DELETE /workouts/{id}` added
-- `upsert()` replaced by `create()` (always inserts)
-- "Yes, I worked out" button opens detail form (no auto-submit); "Rest day" submits immediately
-- Entries list with delete buttons shown below form
-- Streak + monthly summary aggregate by date (`any did_workout=true` per day)
-- MonthlyCalendar shows accumulated duration (mins) per workout day
-- Next-day navigation disabled (workouts: current/past only)
+- Always inserts; `DELETE /workouts/{id}` added; streak aggregates by date
 
 ### Self Assessment — Required note on No
-- Save disabled + red hint shown when No selected with empty note
-
-### Bug Fixes
-- **Timezone bug**: `shiftDate()` in all 3 pages rewritten to use `Date.UTC()` — was broken for UTC+ timezones (right arrow did nothing)
+### Bug Fix — `shiftDate()` rewritten to use `Date.UTC()` (UTC+ timezone fix)
 
 ---
 
-## Phases 4–9 Status
+## Phase 4 — Expenses ✅ COMPLETE + E2E VERIFIED
+- Backend: model, schemas, repo, service, routes, migration 006 — tests passing
+- Frontend: `types/expense.ts`, `hooks/useExpenses.ts`, form, list, monthly chart, `expenses/page.tsx`
+- Categories validated server-side: Groceries, Transport, Social Life, Fitness, Lifestyle, Bills, Self-improvement
+
+---
+
+## Phase 5 — Resolutions ✅ COMPLETE + E2E VERIFIED
+- Backend: `resolutions`, `resolution_check_ins`, `resolution_ai_cache` — migration 007 — 12/12 tests
+- CRUD: POST, GET (status filter), PATCH, DELETE (cascade); monthly check-in upsert
+- Auto-advances `not_started` → `in_progress` on first check-in; auto-sets `progress_percent=100` on complete
+- OpenAI integration: GPT-4o-mini signal analysis with daily DB cache + graceful fallback
+- Frontend: `ResolutionForm`, `ResolutionCard`, `MonthHeatmap`, `CheckInModal`, `AIAnalysisCard`, filter strip
+
+---
+
+## Phase 6 — Dashboard Aggregation ✅ COMPLETE (merged PR #3)
+- Backend: `GET /api/v1/dashboard/` — single endpoint, `DashboardResponse`, `dashboard_service.py` — 3/3 tests
+- Frontend: `useDashboard`, `IntegrityScoreCard`, `WorkoutStreakCard`, `ExpenseSummaryCard`, `ResolutionProgressCard`, `Last7DaysChart` (recharts), skeleton loading
+- Graceful null/zero for fresh users
+
+---
+
+## Phase 7 — Email Reminder Hardening ✅ COMPLETE (merged PR #4)
+- `config.py`: added `REMINDER_HOUR: int = 20` (override via env var)
+- `email_service.py`: `resend.Emails.send` wrapped in `asyncio.to_thread()`; returns `bool`
+- `scheduler_service.py`: in-memory idempotency (`_last_sent_date`); status return strings; uses `REMINDER_HOUR`
+- `admin.py`: `POST /api/v1/admin/trigger-reminder` — dev-only, 404 in production
+- 8 tests: sent, skipped_has_wins, idempotency, no_email, Resend failure isolation, payload validation, dev/prod guard
+
+---
+
+## Phases 8–9 Status
 
 | Phase | Feature | Status |
 |---|---|---|
-| 4 | Expenses | Not started |
-| 5 | Resolutions | Not started |
-| 6 | Dashboard Aggregation | Not started |
-| 7 | Email Reminder Hardening | Not started |
 | 8 | Secondary Features (Food, Grocery, Appointments) | Not started |
 | 9 | CI/CD & Productionization | Not started |
-
----
-
-## Git Workflow (from this point forward)
-- All features developed on `feat/<name>` branches
-- PR opened via `gh pr create`, reviewed, merged to `main`
-- No direct commits to `main` for new features
 
 ---
 
@@ -124,3 +101,6 @@
 - **`shiftDate()`** must use `Date.UTC()` arithmetic — local time + `toISOString()` breaks in UTC+ timezones
 - **SmallWinUpdate.text** is optional (enables PATCH with only `completed` field for checkbox toggle)
 - **Checkbox** shadcn component must be installed separately: `npx shadcn@latest add checkbox`
+- **Skeleton** shadcn component must be installed separately: `npx shadcn@latest add skeleton`
+- **Expense category** validated server-side — must be one of the 7 predefined categories
+- **feat/* branches always rebased on main before merging** — router.py conflicts common when multiple phases add routes simultaneously
