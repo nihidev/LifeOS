@@ -4,7 +4,31 @@
       "Bash(git --version)",
       "Bash(git config --global user.name)",
       "Bash(git config --global user.email)",
-      "Bash(ls /Users/dev/LifeOS && gh auth status)"
+      "Bash(ls /Users/dev/LifeOS && gh auth status)",
+      "Bash(find /Users/dev/LifeOS/frontend -name \".gitkeep\" -delete && echo \"Removed .gitkeep files\")",
+      "Bash(cd /Users/dev/LifeOS/frontend && npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-git --yes 2>&1)",
+      "Bash(npm install @supabase/supabase-js @tanstack/react-query zustand date-fns lucide-react recharts 2>&1 | tail -5)",
+      "Bash(npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom ts-jest 2>&1 | tail -5)",
+      "Bash(npx shadcn@latest init --defaults 2>&1)",
+      "Bash(npx shadcn@latest add button card input label textarea badge progress toast dialog --yes 2>&1)",
+      "Bash(npx shadcn@latest add button card input label textarea badge progress dialog --yes 2>&1 && npx shadcn@latest add sonner --yes 2>&1)",
+      "Bash(npm run build 2>&1)",
+      "Bash(cd /Users/dev/LifeOS/backend && SUPABASE_URL=http://localhost SUPABASE_SERVICE_ROLE_KEY=test_key SUPABASE_JWT_SECRET=test_secret_key_that_is_at_least_32_chars DATABASE_URL=sqlite+aiosqlite:///./test.db RESEND_API_KEY=test_key ENVIRONMENT=test uv run pytest tests/ -v 2>&1)",
+      "Bash(cd /Users/dev/LifeOS/frontend && npm test -- --watchAll=false 2>&1\\\\)",
+      "Bash(cd /Users/dev/LifeOS/frontend && npm test -- --watchAll=false 2>&1)",
+      "Bash(git check-ignore backend/.env frontend/.env.local backend/.venv frontend/node_modules 2>&1)",
+      "Bash(git add Context.md .github/ .gitignore README.md backend/ frontend/ update.md && git status)",
+      "Bash(source .venv/bin/activate && uv run pytest tests/test_small_wins.py -v 2>&1)",
+      "Bash(cd /Users/dev/LifeOS/frontend && npm run build 2>&1)",
+      "Bash(cd /Users/dev/LifeOS/backend && source .venv/bin/activate && uv run alembic upgrade head 2>&1)",
+      "Bash(source .venv/bin/activate && uv run pytest tests/test_workouts.py -v 2>&1)",
+      "Bash(cd /Users/dev/LifeOS/backend && source .venv/bin/activate && uv run pytest tests/test_small_wins.py tests/test_workouts.py -v 2>&1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" http://localhost:3000/small-wins && curl -s -o /dev/null -w \"\\\\n%{http_code}\" http://localhost:8000/health)",
+      "Bash(ls -la /Users/dev/LifeOS/frontend/app/\\\\\\(dashboard\\\\\\)/ 2>/dev/null || ls -la \"/Users/dev/LifeOS/frontend/app/\\(dashboard\\)/\")",
+      "Bash(cd /Users/dev/LifeOS/backend && uv run alembic upgrade head 2>&1)",
+      "Bash(uv run alembic current 2>&1)",
+      "Bash(lsof -i :3000 -i :8000 2>/dev/null | grep LISTEN || echo \"No servers listening on 3000/8000\")",
+      "Bash(npm run dev 2>&1)"
     ]
   }
 }
