@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: lifeos-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install uv && uv pip install --system -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: '["https://lifeos-nine-pi.vercel.app","http://localhost:3000"]'
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: REMINDER_EMAIL
+        sync: false
