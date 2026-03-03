@@ -11,7 +11,6 @@ import {
   Target,
   UtensilsCrossed,
   ShoppingCart,
-  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -24,7 +23,6 @@ const navItems = [
   { href: "/resolutions", label: "Resolutions", icon: Target },
   { href: "/food", label: "Food", icon: UtensilsCrossed },
   { href: "/grocery", label: "Grocery", icon: ShoppingCart },
-  { href: "/appointments", label: "Appointments", icon: Calendar },
 ]
 
 export function Sidebar() {

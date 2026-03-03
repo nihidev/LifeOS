@@ -24,3 +24,9 @@ router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 
 from .admin import router as admin_router
 router.include_router(admin_router, prefix="/admin", tags=["Admin"])
+
+from .food_logs import router as food_logs_router
+router.include_router(food_logs_router, prefix="/food-logs", tags=["Food Logs"])
+
+from .grocery import router as grocery_router
+router.include_router(grocery_router, prefix="/grocery", tags=["Grocery"])
