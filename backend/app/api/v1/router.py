@@ -21,3 +21,6 @@ router.include_router(resolutions_router, prefix="/resolutions", tags=["Resoluti
 
 from .dashboard import router as dashboard_router
 router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
+
+from .admin import router as admin_router
+router.include_router(admin_router, prefix="/admin", tags=["Admin"])

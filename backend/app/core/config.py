@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     REMINDER_EMAIL: str = ""
+    REMINDER_HOUR: int = 20  # 8 PM — change via env var REMINDER_HOUR
     OPENAI_API_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
