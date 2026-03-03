@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as v1_router
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
+from app.services.scheduler_service import build_scheduler
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -27,8 +29,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting LifeOS API (environment=%s)", settings.ENVIRONMENT)
-    # TODO: start scheduler here
+    scheduler = build_scheduler(AsyncSessionLocal)
+    scheduler.start()
     yield
+    scheduler.shutdown()
     logger.info("Shutting down LifeOS API")
 
 

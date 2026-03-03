@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    REMINDER_EMAIL: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

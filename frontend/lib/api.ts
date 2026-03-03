@@ -43,6 +43,7 @@ async function request<T>(
     } catch {
       // ignore parse errors
     }
+    console.error(`[api] ${method} ${path} → ${res.status}: ${message}`)
     throw new ApiError(message, res.status)
   }
 

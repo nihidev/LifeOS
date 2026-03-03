@@ -12,8 +12,8 @@ from app.core.database import Base
 from app.core.config import settings
 
 # Import all models here so they are registered with Base.metadata
-# from app.models.small_win import SmallWin
-# from app.models.workout import Workout
+from app.models.small_win import SmallWin
+from app.models.workout import Workout
 # from app.models.self_assessment import SelfAssessment
 # from app.models.expense import Expense
 # from app.models.resolution import Resolution
@@ -21,7 +21,8 @@ from app.core.config import settings
 config = context.config
 
 # Set the database URL from our settings (overrides alembic.ini value)
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Escape % to %% so ConfigParser doesn't treat URL-encoded chars as interpolation
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

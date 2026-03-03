@@ -1,17 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { signInWithMagicLink } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const callbackError = searchParams.get("error")
+
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(callbackError)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -55,7 +59,9 @@ export default function LoginPage() {
                 />
               </div>
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-destructive font-mono break-all">
+                  Auth error: {error}
+                </p>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Sending…" : "Send Magic Link"}
@@ -65,5 +71,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }
