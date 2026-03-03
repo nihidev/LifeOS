@@ -1,59 +1,98 @@
-import {
-  Trophy, Dumbbell, Brain, CreditCard, Target,
-  UtensilsCrossed, ShoppingCart, Calendar, TrendingUp,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+"use client"
 
-const modules = [
-  { icon: Trophy,         label: "Small Wins",      href: "/small-wins",       phase: "Phase 1", color: "text-yellow-500" },
-  { icon: Dumbbell,       label: "Workout",          href: "/workout",           phase: "Phase 2", color: "text-blue-500"   },
-  { icon: Brain,          label: "Self Assessment",  href: "/self-assessment",   phase: "Phase 3", color: "text-purple-500" },
-  { icon: CreditCard,     label: "Expenses",         href: "/expenses",          phase: "Phase 4", color: "text-green-500"  },
-  { icon: Target,         label: "Resolutions",      href: "/resolutions",       phase: "Phase 5", color: "text-red-500"    },
-  { icon: UtensilsCrossed,label: "Food Log",         href: "/food",              phase: "Phase 8", color: "text-orange-500" },
-  { icon: ShoppingCart,   label: "Grocery List",     href: "/grocery",           phase: "Phase 8", color: "text-teal-500"   },
-  { icon: Calendar,       label: "Appointments",     href: "/appointments",      phase: "Phase 8", color: "text-pink-500"   },
-]
+import { Trophy } from "lucide-react"
+import { useDashboard } from "@/hooks/useDashboard"
+import { IntegrityScoreCard } from "@/components/features/dashboard/IntegrityScoreCard"
+import { WorkoutStreakCard } from "@/components/features/dashboard/WorkoutStreakCard"
+import { ExpenseSummaryCard } from "@/components/features/dashboard/ExpenseSummaryCard"
+import { ResolutionProgressCard } from "@/components/features/dashboard/ResolutionProgressCard"
+import { Last7DaysChart } from "@/components/features/dashboard/Last7DaysChart"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <Skeleton className="h-8 w-48 mb-1" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
+  const { data, isLoading, isError } = useDashboard()
+
+  if (isLoading) return <DashboardSkeleton />
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+        Failed to load dashboard data. Make sure the backend is running.
+      </div>
+    )
+  }
+
+  const today = new Date(data.date + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  })
+
   return (
-    <div className="space-y-8">
-      {/* Hero */}
+    <div className="space-y-6">
+      {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold">Welcome to LifeOS</h1>
-        <p className="text-muted-foreground">Your personal discipline and accountability dashboard.</p>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">{today}</p>
       </div>
 
-      {/* Status banner */}
-      <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-4">
-        <TrendingUp className="h-5 w-5 text-primary" />
-        <div className="text-sm">
-          <span className="font-medium">Phase 0 complete</span>
-          <span className="text-muted-foreground"> — foundation is live. Feature phases are rolling out next.</span>
-        </div>
-        <Badge className="ml-auto">Build in progress</Badge>
-      </div>
+      {/* Today at a glance */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Today at a glance
+        </h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Small wins */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Small Wins</CardTitle>
+              <Trophy className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-yellow-500">{data.small_wins_today}</div>
+              <p className="text-xs text-muted-foreground mt-1">Wins logged today</p>
+            </CardContent>
+          </Card>
 
-      {/* Module grid */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Modules</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {modules.map(({ icon: Icon, label, href, phase, color }) => (
-            <a key={href} href={href}>
-              <Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer h-full">
-                <CardHeader className="pb-2">
-                  <Icon className={`h-6 w-6 ${color}`} />
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <CardTitle className="text-base">{label}</CardTitle>
-                  <Badge variant="secondary" className="text-xs">{phase}</Badge>
-                </CardContent>
-              </Card>
-            </a>
-          ))}
+          <IntegrityScoreCard score={data.integrity_score_today} />
+          <WorkoutStreakCard streak={data.workout_streak} didWorkoutToday={data.did_workout_today} />
+          <ResolutionProgressCard
+            active={data.active_resolutions}
+            completed={data.completed_resolutions}
+          />
         </div>
-      </div>
+      </section>
+
+      {/* Expenses + chart */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Finance & Trends
+        </h2>
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+          <ExpenseSummaryCard
+            total={data.monthly_expense_total}
+            summary={data.expense_summary_this_month}
+          />
+          <Last7DaysChart data={data.last_7_days_integrity} />
+        </div>
+      </section>
     </div>
   )
 }

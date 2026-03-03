@@ -19,5 +19,5 @@ router.include_router(expenses_router, prefix="/expenses", tags=["Expenses"])
 from .resolutions import router as resolutions_router
 router.include_router(resolutions_router, prefix="/resolutions", tags=["Resolutions"])
 
-# from .dashboard import router as dashboard_router
-# router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
+from .dashboard import router as dashboard_router
+router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
