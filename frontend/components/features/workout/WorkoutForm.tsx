@@ -6,63 +6,67 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useLogWorkout } from "@/hooks/useWorkout"
-import type { WorkoutResponse } from "@/types/workout"
 
 interface WorkoutFormProps {
   date: string
-  existing: WorkoutResponse | null
 }
 
-export function WorkoutForm({ date, existing }: WorkoutFormProps) {
-  const [didWorkout, setDidWorkout] = useState<boolean | null>(
-    existing ? existing.did_workout : null
-  )
-  const [activityType, setActivityType] = useState(existing?.activity_type ?? "")
-  const [durationMins, setDurationMins] = useState(
-    existing?.duration_mins?.toString() ?? ""
-  )
-  const [notes, setNotes] = useState(existing?.notes ?? "")
+export function WorkoutForm({ date }: WorkoutFormProps) {
+  const [showForm, setShowForm] = useState(false)
+  const [activityType, setActivityType] = useState("")
+  const [durationMins, setDurationMins] = useState("")
+  const [notes, setNotes] = useState("")
   const log = useLogWorkout()
 
-  async function handleSubmit(workout: boolean) {
-    setDidWorkout(workout)
+  async function handleRestDay() {
     try {
-      await log.mutateAsync({
-        date,
-        did_workout: workout,
-        activity_type: activityType.trim() || undefined,
-        duration_mins: durationMins ? parseInt(durationMins) : undefined,
-        notes: notes.trim() || undefined,
-      })
+      await log.mutateAsync({ date, did_workout: false })
+      setShowForm(false)
     } catch (err) {
       console.error("[WorkoutForm] submit failed:", err)
     }
   }
 
-  const isToday = date === new Date().toISOString().slice(0, 10)
+  async function handleSaveWorkout() {
+    try {
+      await log.mutateAsync({
+        date,
+        did_workout: true,
+        activity_type: activityType.trim() || undefined,
+        duration_mins: durationMins ? parseInt(durationMins) : undefined,
+        notes: notes.trim() || undefined,
+      })
+      setShowForm(false)
+      setActivityType("")
+      setDurationMins("")
+      setNotes("")
+    } catch (err) {
+      console.error("[WorkoutForm] submit failed:", err)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex gap-3">
         <Button
-          variant={didWorkout === true ? "default" : "outline"}
+          variant={showForm ? "default" : "outline"}
           className="flex-1 h-14 text-base"
-          onClick={() => handleSubmit(true)}
+          onClick={() => setShowForm((v) => !v)}
           disabled={log.isPending}
         >
           ✅ Yes, I worked out
         </Button>
         <Button
-          variant={didWorkout === false ? "destructive" : "outline"}
+          variant="outline"
           className="flex-1 h-14 text-base"
-          onClick={() => handleSubmit(false)}
+          onClick={handleRestDay}
           disabled={log.isPending}
         >
-          🛌 Rest day
+          {log.isPending && !showForm ? "Saving…" : "🛌 Rest day"}
         </Button>
       </div>
 
-      {didWorkout === true && (
+      {showForm && (
         <div className="flex flex-col gap-4 p-4 rounded-lg border bg-muted/30">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -96,27 +100,23 @@ export function WorkoutForm({ date, existing }: WorkoutFormProps) {
               rows={2}
             />
           </div>
-          <Button
-            onClick={() => handleSubmit(true)}
-            disabled={log.isPending}
-            className="self-end"
-          >
-            {log.isPending ? "Saving…" : existing ? "Update" : "Save"}
-          </Button>
+          <div className="flex gap-2 self-end">
+            <Button
+              variant="ghost"
+              onClick={() => setShowForm(false)}
+              disabled={log.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveWorkout} disabled={log.isPending}>
+              {log.isPending ? "Saving…" : "Save"}
+            </Button>
+          </div>
         </div>
       )}
 
       {log.isError && (
         <p className="text-sm text-destructive">{log.error.message}</p>
-      )}
-
-      {existing && (
-        <p className="text-xs text-muted-foreground text-center">
-          {isToday ? "Today's" : "This day's"} entry logged —{" "}
-          {existing.did_workout ? "Workout ✅" : "Rest day 🛌"}
-          {existing.activity_type ? ` · ${existing.activity_type}` : ""}
-          {existing.duration_mins ? ` · ${existing.duration_mins} min` : ""}
-        </p>
       )}
     </div>
   )

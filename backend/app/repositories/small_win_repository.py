@@ -10,7 +10,13 @@ from app.schemas.small_win import SmallWinCreate, SmallWinUpdate
 
 
 async def create(db: AsyncSession, user_id: UUID, data: SmallWinCreate) -> SmallWin:
-    win = SmallWin(user_id=user_id, date=data.date, text=data.text)
+    win = SmallWin(
+        user_id=user_id,
+        date=data.date,
+        text=data.text,
+        entry_type=data.entry_type,
+        completed=data.completed,
+    )
     db.add(win)
     await db.flush()
     await db.refresh(win)
@@ -43,7 +49,10 @@ async def update(
     win = await get_by_id(db, user_id, id)
     if win is None:
         return None
-    win.text = data.text
+    if data.text is not None:
+        win.text = data.text
+    if data.completed is not None:
+        win.completed = data.completed
     win.updated_at = func.now()
     await db.flush()
     await db.refresh(win)

@@ -1,20 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { WorkoutForm } from "@/components/features/workout/WorkoutForm"
 import { StreakCard } from "@/components/features/workout/StreakCard"
 import { MonthlyCalendar } from "@/components/features/workout/MonthlyCalendar"
-import { useWorkout, useWorkoutStreak, useWorkoutMonthlySummary } from "@/hooks/useWorkout"
+import { useWorkout, useWorkoutStreak, useWorkoutMonthlySummary, useDeleteWorkout } from "@/hooks/useWorkout"
 import { getToday, formatDate } from "@/lib/utils"
 
 function shiftDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00")
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split("-").map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
 }
 
 export default function WorkoutPage() {
@@ -24,12 +23,13 @@ export default function WorkoutPage() {
   const [calYear, setCalYear] = useState(now.getFullYear())
   const [calMonth, setCalMonth] = useState(now.getMonth() + 1)
 
-  const { data: workout, isLoading: loadingWorkout } = useWorkout(date)
+  const { data: workouts = [], isLoading: loadingWorkout } = useWorkout(date)
   const { data: streak } = useWorkoutStreak()
   const { data: summary, isLoading: loadingSummary } = useWorkoutMonthlySummary(
     calYear,
     calMonth
   )
+  const deleteWorkout = useDeleteWorkout()
 
   function prevMonth() {
     if (calMonth === 1) { setCalMonth(12); setCalYear((y) => y - 1) }
@@ -74,17 +74,57 @@ export default function WorkoutPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {date === today ? "Did you workout today?" : `Log for ${formatDate(date)}`}
+              {date === today ? "Log a workout" : `Log for ${formatDate(date)}`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingWorkout ? (
               <div className="h-14 bg-muted animate-pulse rounded-md" />
             ) : (
-              <WorkoutForm date={date} existing={workout ?? null} />
+              <WorkoutForm date={date} />
             )}
           </CardContent>
         </Card>
+
+        {workouts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {date === today ? "Today's entries" : `${formatDate(date)} entries`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2">
+                {workouts.map((w) => (
+                  <div
+                    key={w.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium">
+                        {w.did_workout ? "✅ Workout" : "🛌 Rest day"}
+                        {w.activity_type ? ` · ${w.activity_type}` : ""}
+                        {w.duration_mins ? ` · ${w.duration_mins} min` : ""}
+                      </span>
+                      {w.notes && (
+                        <span className="text-xs text-muted-foreground">{w.notes}</span>
+                      )}
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteWorkout.mutate({ id: w.id, date })}
+                      disabled={deleteWorkout.isPending}
+                      aria-label="Delete entry"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

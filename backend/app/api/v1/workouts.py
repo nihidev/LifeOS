@@ -1,7 +1,7 @@
 import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.core.deps import CurrentUser, DB
 from app.schemas.workout import (
@@ -42,10 +42,22 @@ async def get_monthly_summary(
     return await service.get_monthly_summary(db, user_id, year, month)
 
 
-@router.get("/", response_model=WorkoutResponse | None)
-async def get_workout(
+@router.get("/", response_model=list[WorkoutResponse])
+async def get_workouts(
     date: datetime.date,
     db: DB,
     user_id: CurrentUser,
-) -> WorkoutResponse | None:
-    return await service.get_workout(db, user_id, date)
+) -> list[WorkoutResponse]:
+    return await service.get_workouts(db, user_id, date)
+
+
+@router.delete("/{id}", status_code=status.HTTP_200_OK)
+async def delete_workout(
+    id: UUID,
+    db: DB,
+    user_id: CurrentUser,
+) -> dict[str, str]:
+    deleted = await service.delete_workout(db, user_id, id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Workout entry not found")
+    return {"message": "deleted"}

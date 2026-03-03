@@ -12,9 +12,9 @@ import type {
 const KEY = "workouts"
 
 export function useWorkout(date: string) {
-  return useQuery<WorkoutResponse | null>({
+  return useQuery<WorkoutResponse[]>({
     queryKey: [KEY, "day", date],
-    queryFn: () => api.get<WorkoutResponse | null>(`/api/v1/workouts/?date=${date}`),
+    queryFn: () => api.get<WorkoutResponse[]>(`/api/v1/workouts/?date=${date}`),
     enabled: !!date,
   })
 }
@@ -43,6 +43,20 @@ export function useLogWorkout() {
     onSuccess: (data) => {
       const d = new Date(data.date + "T00:00:00")
       qc.invalidateQueries({ queryKey: [KEY, "day", data.date] })
+      qc.invalidateQueries({ queryKey: [KEY, "streak"] })
+      qc.invalidateQueries({ queryKey: [KEY, "monthly", d.getFullYear(), d.getMonth() + 1] })
+    },
+  })
+}
+
+export function useDeleteWorkout() {
+  const qc = useQueryClient()
+  return useMutation<{ message: string }, Error, { id: string; date: string }>({
+    mutationFn: ({ id }) =>
+      api.delete<{ message: string }>(`/api/v1/workouts/${id}`),
+    onSuccess: (_, { date }) => {
+      const d = new Date(date + "T00:00:00")
+      qc.invalidateQueries({ queryKey: [KEY, "day", date] })
       qc.invalidateQueries({ queryKey: [KEY, "streak"] })
       qc.invalidateQueries({ queryKey: [KEY, "monthly", d.getFullYear(), d.getMonth() + 1] })
     },

@@ -2,7 +2,7 @@ from datetime import date as date_type
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Index, Text, Uuid
+from sqlalchemy import Boolean, Date, DateTime, Index, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -16,6 +16,8 @@ class SmallWin(Base):
     user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     date: Mapped[date_type] = mapped_column(Date, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    entry_type: Mapped[str] = mapped_column(Text, nullable=False, default="win")
+    completed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

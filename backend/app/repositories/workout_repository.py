@@ -8,19 +8,8 @@ from app.models.workout import Workout
 from app.schemas.workout import WorkoutCreate
 
 
-async def upsert(db: AsyncSession, user_id: UUID, data: WorkoutCreate) -> Workout:
-    """Create a workout entry, or replace it if one already exists for that date."""
-    existing = await get_by_date(db, user_id, data.date)
-    if existing:
-        existing.did_workout = data.did_workout
-        existing.activity_type = data.activity_type
-        existing.duration_mins = data.duration_mins
-        existing.notes = data.notes
-        existing.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        await db.flush()
-        await db.refresh(existing)
-        return existing
-
+async def create(db: AsyncSession, user_id: UUID, data: WorkoutCreate) -> Workout:
+    """Always insert a new workout entry (multiple per day allowed)."""
     workout = Workout(
         user_id=user_id,
         date=data.date,
@@ -37,11 +26,31 @@ async def upsert(db: AsyncSession, user_id: UUID, data: WorkoutCreate) -> Workou
 
 async def get_by_date(
     db: AsyncSession, user_id: UUID, date: datetime.date
+) -> list[Workout]:
+    result = await db.execute(
+        select(Workout)
+        .where(Workout.user_id == user_id, Workout.date == date)
+        .order_by(Workout.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_by_id(
+    db: AsyncSession, user_id: UUID, id: UUID
 ) -> Workout | None:
     result = await db.execute(
-        select(Workout).where(Workout.user_id == user_id, Workout.date == date)
+        select(Workout).where(Workout.id == id, Workout.user_id == user_id)
     )
     return result.scalar_one_or_none()
+
+
+async def delete(db: AsyncSession, user_id: UUID, id: UUID) -> bool:
+    workout = await get_by_id(db, user_id, id)
+    if workout is None:
+        return False
+    await db.delete(workout)
+    await db.flush()
+    return True
 
 
 async def get_range(
@@ -57,7 +66,7 @@ async def get_range(
             Workout.date >= start,
             Workout.date <= end,
         )
-        .order_by(Workout.date.desc())
+        .order_by(Workout.date.asc())
     )
     return list(result.scalars().all())
 

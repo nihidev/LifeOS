@@ -106,26 +106,25 @@ async def test_log_workout_fields_stored(client: AsyncClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 3. POST upsert — same date replaces existing
+# 3. POST two entries same day — both exist in GET
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_upsert_same_date_replaces(client: AsyncClient) -> None:
+async def test_two_entries_same_day(client: AsyncClient) -> None:
     await client.post(
-        "/api/v1/workouts/", json={"date": _TODAY, "did_workout": True, "notes": "first"}
+        "/api/v1/workouts/", json={"date": _TODAY, "did_workout": True, "notes": "morning"}
     )
-    res = await client.post(
-        "/api/v1/workouts/", json={"date": _TODAY, "did_workout": False, "notes": "second"}
+    await client.post(
+        "/api/v1/workouts/", json={"date": _TODAY, "did_workout": False, "notes": "evening"}
     )
+    res = await client.get(f"/api/v1/workouts/?date={_TODAY}")
     assert res.status_code == 200
-    body = res.json()
-    assert body["did_workout"] is False
-    assert body["notes"] == "second"
+    assert len(res.json()) == 2
 
 
 # ---------------------------------------------------------------------------
-# 4. GET by date returns the entry
+# 4. GET by date returns list with the entry
 # ---------------------------------------------------------------------------
 
 
@@ -136,19 +135,20 @@ async def test_get_workout_by_date(client: AsyncClient) -> None:
     )
     res = await client.get(f"/api/v1/workouts/?date={_TODAY}")
     assert res.status_code == 200
-    assert res.json()["did_workout"] is True
+    assert isinstance(res.json(), list)
+    assert res.json()[0]["did_workout"] is True
 
 
 # ---------------------------------------------------------------------------
-# 5. GET by date with no entry returns null
+# 5. GET by date with no entry returns empty list
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_get_workout_no_entry_returns_null(client: AsyncClient) -> None:
+async def test_get_workout_no_entry_returns_empty_list(client: AsyncClient) -> None:
     res = await client.get("/api/v1/workouts/?date=2000-01-01")
     assert res.status_code == 200
-    assert res.json() is None
+    assert res.json() == []
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +251,62 @@ async def test_monthly_summary(client: AsyncClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 12. Cross-user isolation — user B sees no data
+# 12. Monthly summary deduplicates multi-entry per day
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_monthly_summary_deduplicates_multi_entry(client: AsyncClient) -> None:
+    today = datetime.date.today()
+    # Two entries on the same day — should count as 1 workout day
+    await client.post(
+        "/api/v1/workouts/", json={"date": today.isoformat(), "did_workout": True}
+    )
+    await client.post(
+        "/api/v1/workouts/", json={"date": today.isoformat(), "did_workout": False}
+    )
+    res = await client.get(
+        f"/api/v1/workouts/monthly-summary?year={today.year}&month={today.month}"
+    )
+    body = res.json()
+    assert body["workout_days"] == 1
+    assert body["rest_days"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 13. DELETE removes entry, returns 200
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_workout_returns_200(client: AsyncClient) -> None:
+    create_res = await client.post(
+        "/api/v1/workouts/", json={"date": _TODAY, "did_workout": True}
+    )
+    workout_id = create_res.json()["id"]
+    del_res = await client.delete(f"/api/v1/workouts/{workout_id}")
+    assert del_res.status_code == 200
+    assert del_res.json() == {"message": "deleted"}
+    # Verify entry is gone
+    get_res = await client.get(f"/api/v1/workouts/?date={_TODAY}")
+    assert get_res.json() == []
+
+
+# ---------------------------------------------------------------------------
+# 14. DELETE non-existent returns 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_nonexistent_workout_returns_404(client: AsyncClient) -> None:
+    res = await client.delete(
+        "/api/v1/workouts/00000000-0000-0000-0000-000000000099"
+    )
+    assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 15. Cross-user isolation — user B sees empty list
 # ---------------------------------------------------------------------------
 
 
@@ -264,11 +319,11 @@ async def test_cross_user_isolation(db_session: AsyncSession) -> None:
 
     async for client_b in _make_client(db_session, _USER_B):
         res = await client_b.get(f"/api/v1/workouts/?date={_TODAY}")
-        assert res.json() is None
+        assert res.json() == []
 
 
 # ---------------------------------------------------------------------------
-# 13. Unauthenticated returns 403
+# 16. Unauthenticated returns 403
 # ---------------------------------------------------------------------------
 
 

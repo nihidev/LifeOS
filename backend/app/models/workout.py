@@ -2,7 +2,7 @@ from datetime import date as date_type
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, Date, DateTime, Index, Integer, Text, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, Date, DateTime, Index, Integer, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -26,7 +26,4 @@ class Workout(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "date", name="uq_workouts_user_date"),
-        Index("idx_workouts_user_date", "user_id", "date"),
-    )
+    __table_args__ = (Index("idx_workouts_user_date", "user_id", "date"),)

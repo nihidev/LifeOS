@@ -71,14 +71,25 @@ export function AssessmentForm({ date, existing }: Props) {
       </div>
 
       <Textarea
-        placeholder="Optional note..."
+        placeholder={selected === false ? "Required — explain what went wrong" : "Optional note..."}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
         className="resize-none"
       />
 
-      <Button onClick={handleSubmit} disabled={selected === null || isPending}>
+      {selected === false && note.trim() === "" && (
+        <p className="text-xs text-destructive">A note is required when selecting No</p>
+      )}
+
+      <Button
+        onClick={handleSubmit}
+        disabled={
+          selected === null ||
+          isPending ||
+          (selected === false && note.trim() === "")
+        }
+      >
         {isPending ? "Saving…" : "Save"}
       </Button>
     </div>

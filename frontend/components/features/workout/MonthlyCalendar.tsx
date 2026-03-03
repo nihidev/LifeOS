@@ -19,9 +19,15 @@ export function MonthlyCalendar({
   const totalDays = summary.total_days
   const today = new Date().toISOString().slice(0, 10)
 
-  const statusMap = new Map(
-    summary.entries.map((e) => [e.date, e.did_workout])
-  )
+  // Aggregate multi-entry per day
+  const statusMap = new Map<string, boolean>()
+  const durationMap = new Map<string, number>()
+  for (const e of summary.entries) {
+    statusMap.set(e.date, (statusMap.get(e.date) ?? false) || e.did_workout)
+    if (e.did_workout && e.duration_mins) {
+      durationMap.set(e.date, (durationMap.get(e.date) ?? 0) + e.duration_mins)
+    }
+  }
 
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
@@ -46,6 +52,7 @@ export function MonthlyCalendar({
           if (!day) return <div key={`empty-${idx}`} />
           const ds = dateStr(day)
           const status = statusMap.get(ds)
+          const duration = durationMap.get(ds) ?? 0
           const isFuture = ds > today
           const isSelected = ds === selectedDate
           const isToday = ds === today
@@ -56,7 +63,7 @@ export function MonthlyCalendar({
               onClick={() => !isFuture && onSelectDate(ds)}
               disabled={isFuture}
               className={cn(
-                "aspect-square rounded-md text-xs font-medium flex items-center justify-center transition-colors",
+                "rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors py-1 min-h-[2.5rem]",
                 isFuture && "opacity-30 cursor-default",
                 !isFuture && "hover:bg-muted cursor-pointer",
                 isSelected && "ring-2 ring-primary",
@@ -66,7 +73,12 @@ export function MonthlyCalendar({
                 status === undefined && !isFuture && "text-muted-foreground"
               )}
             >
-              {day}
+              <span>{day}</span>
+              {duration > 0 && (
+                <span className="text-[9px] leading-none opacity-80 font-normal">
+                  {duration}m
+                </span>
+              )}
             </button>
           )
         })}

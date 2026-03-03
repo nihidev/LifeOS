@@ -16,21 +16,30 @@ from app.schemas.workout import (
 async def log_workout(
     db: AsyncSession, user_id: UUID, data: WorkoutCreate
 ) -> WorkoutResponse:
-    workout = await repo.upsert(db, user_id, data)
+    workout = await repo.create(db, user_id, data)
     return WorkoutResponse.model_validate(workout)
 
 
-async def get_workout(
+async def get_workouts(
     db: AsyncSession, user_id: UUID, date: datetime.date
-) -> WorkoutResponse | None:
-    workout = await repo.get_by_date(db, user_id, date)
-    return WorkoutResponse.model_validate(workout) if workout else None
+) -> list[WorkoutResponse]:
+    workouts = await repo.get_by_date(db, user_id, date)
+    return [WorkoutResponse.model_validate(w) for w in workouts]
+
+
+async def delete_workout(
+    db: AsyncSession, user_id: UUID, id: UUID
+) -> bool:
+    return await repo.delete(db, user_id, id)
 
 
 async def get_streak(db: AsyncSession, user_id: UUID) -> StreakResponse:
     workouts = await repo.get_all(db, user_id)
-    # Build a lookup dict: date → did_workout
-    by_date: dict[datetime.date, bool] = {w.date: w.did_workout for w in workouts}
+
+    # Build per-date lookup: date → True if ANY entry has did_workout=True
+    by_date: dict[datetime.date, bool] = {}
+    for w in workouts:
+        by_date[w.date] = by_date.get(w.date, False) or w.did_workout
 
     today = datetime.date.today()
 
@@ -72,8 +81,13 @@ async def get_monthly_summary(
     workouts = await repo.get_range(db, user_id, start, end)
     entries = [WorkoutResponse.model_validate(w) for w in workouts]
 
-    workout_days = sum(1 for w in workouts if w.did_workout)
-    rest_days = sum(1 for w in workouts if not w.did_workout)
+    # Aggregate by date: a day counts as workout if ANY entry has did_workout=True
+    by_date: dict[datetime.date, bool] = {}
+    for w in workouts:
+        by_date[w.date] = by_date.get(w.date, False) or w.did_workout
+
+    workout_days = sum(1 for v in by_date.values() if v)
+    rest_days = sum(1 for v in by_date.values() if not v)
     completion_percent = round(workout_days / days_in_month * 100, 1)
 
     return MonthlySummaryResponse(

@@ -11,9 +11,8 @@ import { useSmallWins } from "@/hooks/useSmallWins"
 import { getToday, formatDate } from "@/lib/utils"
 
 function shiftDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00")
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split("-").map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
 }
 
 export default function SmallWinsPage() {
@@ -42,7 +41,6 @@ export default function SmallWinsPage() {
               size="icon"
               variant="outline"
               onClick={() => setDate((d) => shiftDate(d, 1))}
-              disabled={date >= today}
               aria-label="Next day"
             >
               <ChevronRight className="h-4 w-4" />
@@ -52,7 +50,9 @@ export default function SmallWinsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Log a Win</CardTitle>
+            <CardTitle className="text-base">
+              {date === today ? "Log a Win or Task" : `Plan for ${formatDate(date)}`}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <SmallWinForm date={date} />
@@ -60,9 +60,16 @@ export default function SmallWinsPage() {
         </Card>
 
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            {wins?.length ?? 0} Win{wins?.length === 1 ? "" : "s"} Logged
-          </h2>
+          {(() => {
+            const winCount = wins?.filter(
+              (w) => w.entry_type === "win" || w.completed === true
+            ).length ?? 0
+            return (
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                {winCount} Win{winCount === 1 ? "" : "s"} Logged
+              </h2>
+            )
+          })()}
           {isLoading && (
             <div className="flex flex-col gap-3">
               {[1, 2].map((i) => (

@@ -276,3 +276,48 @@ async def test_unauthenticated_returns_403() -> None:
     ) as raw_client:
         res = await raw_client.get(f"/api/v1/small-wins/?date={_TODAY}")
     assert res.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# 15. Create task — entry_type=task, response includes it
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_task_entry_type(client: AsyncClient) -> None:
+    res = await client.post(
+        "/api/v1/small-wins/",
+        json={"date": _TODAY, "text": "Buy groceries", "entry_type": "task"},
+    )
+    assert res.status_code == 201
+    body = res.json()
+    assert body["entry_type"] == "task"
+    assert body["completed"] is None
+
+
+# ---------------------------------------------------------------------------
+# 16. Toggle task completion via PATCH
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_toggle_task_completion(client: AsyncClient) -> None:
+    create_res = await client.post(
+        "/api/v1/small-wins/",
+        json={"date": _TODAY, "text": "Clean up", "entry_type": "task"},
+    )
+    task_id = create_res.json()["id"]
+
+    # Mark as complete
+    patch_res = await client.patch(
+        f"/api/v1/small-wins/{task_id}", json={"completed": True}
+    )
+    assert patch_res.status_code == 200
+    assert patch_res.json()["completed"] is True
+
+    # Mark as incomplete
+    patch_res2 = await client.patch(
+        f"/api/v1/small-wins/{task_id}", json={"completed": False}
+    )
+    assert patch_res2.status_code == 200
+    assert patch_res2.json()["completed"] is False

@@ -43,6 +43,21 @@ export function useUpdateSmallWin() {
   })
 }
 
+export function useToggleComplete() {
+  const qc = useQueryClient()
+  return useMutation<
+    SmallWinResponse,
+    Error,
+    { id: string; date: string; completed: boolean }
+  >({
+    mutationFn: ({ id, completed }) =>
+      api.patch<SmallWinResponse>(`/api/v1/small-wins/${id}`, { completed }),
+    onSuccess: (_, { date }) => {
+      qc.invalidateQueries({ queryKey: [QUERY_KEY, date] })
+    },
+  })
+}
+
 export function useDeleteSmallWin() {
   const qc = useQueryClient()
   return useMutation<{ message: string }, Error, { id: string; date: string }>({
