@@ -12,7 +12,6 @@ const routeTitles: Record<string, string> = {
   "/resolutions": "Resolutions",
   "/food": "Food Log",
   "/grocery": "Grocery List",
-  "/appointments": "Appointments",
 }
 
 export function Header() {
