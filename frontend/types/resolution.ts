@@ -1,0 +1,59 @@
+export type ResolutionStatus = "not_started" | "in_progress" | "completed"
+export type AISignal = "on_track" | "at_risk" | "no_signal"
+
+export interface CheckInResponse {
+  id: string
+  resolution_id: string
+  year: number
+  month: number
+  rating: number
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ResolutionResponse {
+  id: string
+  title: string
+  description: string | null
+  status: ResolutionStatus
+  progress_percent: number
+  target_date: string | null
+  created_at: string
+  updated_at: string
+  check_ins: CheckInResponse[]
+}
+
+export interface CheckInCreateInput {
+  year: number
+  month: number
+  rating: number
+  note?: string
+}
+
+export interface ResolutionCreateInput {
+  title: string
+  description?: string
+  target_date?: string
+}
+
+export interface ResolutionUpdateInput {
+  title?: string
+  description?: string
+  status?: ResolutionStatus
+  progress_percent?: number
+  target_date?: string
+}
+
+export interface AIAnalysisItem {
+  resolution_id: string
+  resolution_title: string
+  signal: AISignal
+  evidence: string[]
+  suggestion: string
+}
+
+export interface AIAnalysisResponse {
+  generated_at: string
+  analyses: AIAnalysisItem[]
+}
