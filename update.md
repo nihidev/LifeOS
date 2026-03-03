@@ -203,12 +203,37 @@ async def get_db():
 
 ---
 
-## Phases 3–9 Status
+## Phase 3 — Self Assessment ✅ COMPLETE
+
+### Backend
+- `backend/app/models/self_assessment.py` — SQLAlchemy model with unique constraint on (user_id, date)
+- `backend/app/schemas/self_assessment.py` — Pydantic v2 schemas (Create, Response, HistoryResponse)
+- `backend/app/repositories/self_assessment_repository.py` — upsert, get_by_date, get_history, get_average_score
+- `backend/app/services/self_assessment_service.py` — binary score calc, history with rolling average
+- `backend/app/api/v1/self_assessment.py` — POST `/`, GET `/?date=`, GET `/history`
+- `backend/app/api/v1/router.py` — self_assessment router registered
+- `backend/alembic/versions/003_create_self_assessments.py` — migration applied to Supabase
+- `backend/tests/test_self_assessment.py` — 12/12 tests passing
+
+### Frontend
+- `frontend/types/self-assessment.ts` — TypeScript interfaces
+- `frontend/hooks/useSelfAssessment.ts` — TanStack Query hooks (useSelfAssessment, useSelfAssessmentHistory, useSaveAssessment)
+- `frontend/components/features/self-assessment/AssessmentForm.tsx` — Yes/No toggle + optional note
+- `frontend/components/features/self-assessment/ScoreHistory.tsx` — Recharts line chart, 30-day trend + rolling average
+- `frontend/app/(dashboard)/self-assessment/page.tsx` — date-navigable page with form + history chart
+
+### Also Fixed
+- `frontend/app/dev-login/route.ts` — Changed `Request` → `NextRequest` to fix pre-existing TypeScript build error
+
+---
+
+## Phases 4–9 Status
 
 | Phase | Feature | Status |
 |---|---|---|
-| 3 | Self Assessment | Not started |
+| 3 | Self Assessment | ✅ Complete |
 | 4 | Expenses | Not started |
+
 | 5 | Resolutions | Not started |
 | 6 | Dashboard Aggregation | Not started |
 | 7 | Email Reminder Hardening | Not started |

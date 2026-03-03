@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
     return new NextResponse("Not found", { status: 404 })
   }
