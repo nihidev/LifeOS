@@ -5,10 +5,12 @@ import { api } from "@/lib/api"
 import type {
   SmallWinCreateInput,
   SmallWinResponse,
+  SmallWinStats,
   SmallWinUpdateInput,
 } from "@/types/small-win"
 
 const QUERY_KEY = "small-wins"
+const STATS_KEY = "small-wins-stats"
 
 export function useSmallWins(date: string) {
   return useQuery<SmallWinResponse[]>({
@@ -18,12 +20,20 @@ export function useSmallWins(date: string) {
   })
 }
 
+export function useSmallWinStats() {
+  return useQuery<SmallWinStats>({
+    queryKey: [STATS_KEY],
+    queryFn: () => api.get<SmallWinStats>("/api/v1/small-wins/stats"),
+  })
+}
+
 export function useCreateSmallWin() {
   const qc = useQueryClient()
   return useMutation<SmallWinResponse, Error, SmallWinCreateInput>({
     mutationFn: (body) => api.post<SmallWinResponse>("/api/v1/small-wins/", body),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, data.date] })
+      qc.invalidateQueries({ queryKey: [STATS_KEY] })
     },
   })
 }
@@ -54,6 +64,7 @@ export function useToggleComplete() {
       api.patch<SmallWinResponse>(`/api/v1/small-wins/${id}`, { completed }),
     onSuccess: (_, { date }) => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, date] })
+      qc.invalidateQueries({ queryKey: [STATS_KEY] })
     },
   })
 }

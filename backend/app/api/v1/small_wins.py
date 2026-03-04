@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from app.core.deps import CurrentUser, DB
-from app.schemas.small_win import SmallWinCreate, SmallWinResponse, SmallWinUpdate
+from app.schemas.small_win import SmallWinCreate, SmallWinResponse, SmallWinStats, SmallWinUpdate
 from app.services import small_win_service as service
 
 router = APIRouter()
@@ -26,6 +26,14 @@ async def get_wins_by_date(
     user_id: CurrentUser,
 ) -> list[SmallWinResponse]:
     return await service.get_wins_by_date(db, user_id, date)
+
+
+@router.get("/stats", response_model=SmallWinStats)
+async def get_stats(
+    db: DB,
+    user_id: CurrentUser,
+) -> SmallWinStats:
+    return await service.get_stats(db, user_id)
 
 
 @router.patch("/{id}", response_model=SmallWinResponse)

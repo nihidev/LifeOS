@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAddFoodLog } from "@/hooks/useFoodLogs"
+import { toast } from "sonner"
 
 interface FoodLogFormProps {
   date: string
@@ -45,7 +46,7 @@ export function FoodLogForm({ date }: FoodLogFormProps) {
       )
       setDishes([""])
     } catch {
-      // error handled by React Query
+      toast.error("Failed to log food")
     }
   }
 

@@ -1,7 +1,7 @@
 # LifeOS — Build Progress
 
-**Last Updated:** 2026-03-03
-**Current Phase:** Phase 7 (Email) ✅ COMPLETE. Next: Phase 8 (Secondary Features).
+**Last Updated:** 2026-03-04
+**Current Phase:** Phase 9 (CI/CD & Productionization) — in progress.
 
 ---
 
@@ -82,12 +82,62 @@
 
 ---
 
-## Phases 8–9 Status
+## Phase 8 — Secondary Features ✅ COMPLETE (merged PR #5)
+- Food Logs: model, migration 008, repo, service, routes, tests
+- Water Intake: model, migration 008, repo, service, routes, tests
+- Grocery List: model, migration 009, repo, service, routes, tests
+- **Appointments: removed from scope permanently**
+- Frontend: food log form/list, water intake tracker, grocery checklist, hooks, pages
 
-| Phase | Feature | Status |
+## Deployment ✅ COMPLETE (2026-03-04)
+- Backend live on Render (Docker): https://lifeos-api-qk86.onrender.com
+- DATABASE_URL: Supabase transaction pooler `aws-1-eu-central-1.pooler.supabase.com:6543`
+- Frontend live on Vercel: https://lifeos-nine-pi.vercel.app
+
+## Phase 9 — CI/CD & Productionization 🔄 IN PROGRESS
+
+### Code Fixes (pre-PR)
+| Task | File | Status |
 |---|---|---|
-| 8 | Secondary Features (Food, Grocery, Appointments) | Not started |
-| 9 | CI/CD & Productionization | Not started |
+| Fix `dashboard.py` to use `DB`/`CurrentUser` aliases (not raw `Depends()`) | `api/v1/dashboard.py:14-18` | ✅ Done |
+| Add `user_id` filter to scheduler's SmallWin query | `services/scheduler_service.py:41` | N/A — single-user app, no user context in scheduler |
+| Fix silent error catch in FoodLogForm, ResolutionForm, ExpenseForm (show toast) | frontend forms | ✅ Done |
+| Disable form inputs during mutation in ExpenseForm | `ExpenseForm` | ✅ Done |
+
+### Backend CI/CD
+| Task | Status |
+|---|---|
+| Add `--cov-fail-under=85` to `backend.yml` | ✅ Done |
+| Add post-deploy smoke test (`curl /health`) to CI | Not started |
+| Verify `pytest --cov` actually hits ≥ 85% locally | ✅ Done — **96%** (was 75% due to SQLAlchemy greenlet tracer bug; fixed with `concurrency=["greenlet"]` in pyproject.toml) |
+| Consolidate duplicate test fixtures into `tests/conftest.py` | Not started |
+
+### Dockerfile Hardening
+| Task | Status |
+|---|---|
+| Add non-root user (`RUN useradd -m appuser` + `USER appuser`) | ✅ Done |
+| Add `HEALTHCHECK` instruction | ✅ Done |
+| Create `.dockerignore` to exclude `.venv`, `__pycache__`, `.git`, etc. | ✅ Done |
+
+### Frontend CI/CD
+| Task | Status |
+|---|---|
+| Tighten CORS: whitelist methods `["GET","POST","PATCH","DELETE","OPTIONS"]` and headers `["Content-Type","Authorization"]` | ✅ Done |
+| Verify `next build` passes with zero errors | Not started |
+
+### Frontend Tests (biggest chunk)
+| Task | Status |
+|---|---|
+| Hook tests: `useSmallWins`, `useWorkout`, `useExpenses`, `useResolutions`, `useFoodLogs`, `useGrocery`, `useSelfAssessment` | Not started |
+| Component tests: `SmallWinForm`, `SmallWinList`, `ExpenseForm`, `WorkoutForm`, `ResolutionForm` | Not started |
+| Aim for ≥ 80% frontend coverage | Not started |
+
+### Infrastructure Files
+| Task | Status |
+|---|---|
+| `docker-compose.yml` for local Postgres + backend dev | Not started |
+| `Makefile` with `make test`, `make lint`, `make run`, `make migrate` | Not started |
+| Expand `README.md` with quick-start, deploy instructions, architecture | Not started |
 
 ---
 
@@ -104,3 +154,4 @@
 - **Skeleton** shadcn component must be installed separately: `npx shadcn@latest add skeleton`
 - **Expense category** validated server-side — must be one of the 7 predefined categories
 - **feat/* branches always rebased on main before merging** — router.py conflicts common when multiple phases add routes simultaneously
+- **SQLAlchemy async coverage**: add `[tool.coverage.run] concurrency = ["greenlet"]` to `pyproject.toml` — without it, coverage.py loses its tracer inside `await db.execute()` (SQLAlchemy uses greenlet internally), making async services appear at ~33% coverage even when fully tested. Fixed: 75% → 96%.

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useAddResolution } from "@/hooks/useResolutions"
+import { toast } from "sonner"
 
 export function ResolutionForm() {
   const [title, setTitle] = useState("")
@@ -25,7 +26,7 @@ export function ResolutionForm() {
       setDescription("")
       setTargetDate("")
     } catch {
-      // error handled by React Query
+      toast.error("Failed to add resolution")
     }
   }
 
