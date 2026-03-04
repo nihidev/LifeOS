@@ -7,8 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { SmallWinForm } from "@/components/features/small-wins/SmallWinForm"
 import { SmallWinList } from "@/components/features/small-wins/SmallWinList"
+import { WinStreakBanner } from "@/components/features/small-wins/WinStreakBanner"
 import { useSmallWins } from "@/hooks/useSmallWins"
-import { getToday, formatDate } from "@/lib/utils"
+import { getToday, formatDate, cn } from "@/lib/utils"
+import type { SmallWinCategory } from "@/types/small-win"
+
+const CATEGORIES: SmallWinCategory[] = ["Work", "Health", "Personal Growth", "General"]
 
 function shiftDate(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number)
@@ -17,12 +21,21 @@ function shiftDate(dateStr: string, days: number): string {
 
 export default function SmallWinsPage() {
   const [date, setDate] = useState(getToday())
+  const [activeFilter, setActiveFilter] = useState<SmallWinCategory | null>(null)
   const today = getToday()
   const { data: wins, isLoading, isError } = useSmallWins(date)
+
+  const filteredWins = wins
+    ? wins.filter((w) => !activeFilter || w.category === activeFilter)
+    : []
+
+  const winCount =
+    wins?.filter((w) => w.entry_type === "win" || w.completed === true).length ?? 0
 
   return (
     <PageWrapper>
       <div className="max-w-2xl mx-auto flex flex-col gap-6">
+        {/* Header + date navigator */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Small Wins</h1>
           <div className="flex items-center gap-2">
@@ -48,6 +61,10 @@ export default function SmallWinsPage() {
           </div>
         </div>
 
+        {/* Streak + heatmap banner */}
+        <WinStreakBanner />
+
+        {/* Form */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -59,17 +76,45 @@ export default function SmallWinsPage() {
           </CardContent>
         </Card>
 
+        {/* List section */}
         <div>
-          {(() => {
-            const winCount = wins?.filter(
-              (w) => w.entry_type === "win" || w.completed === true
-            ).length ?? 0
-            return (
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                {winCount} Win{winCount === 1 ? "" : "s"} Logged
-              </h2>
-            )
-          })()}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {winCount} Win{winCount === 1 ? "" : "s"} Today
+            </h2>
+
+            {/* Category filter pills */}
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveFilter(null)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                  activeFilter === null
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:border-foreground"
+                )}
+              >
+                All
+              </button>
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveFilter((prev) => (prev === cat ? null : cat))}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                    activeFilter === cat
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-foreground"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {isLoading && (
             <div className="flex flex-col gap-3">
               {[1, 2].map((i) => (
@@ -82,7 +127,7 @@ export default function SmallWinsPage() {
               Failed to load wins. Please refresh.
             </p>
           )}
-          {wins && <SmallWinList wins={wins} date={date} />}
+          {wins && <SmallWinList wins={filteredWins} date={date} />}
         </div>
       </div>
     </PageWrapper>

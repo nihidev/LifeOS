@@ -321,3 +321,115 @@ async def test_toggle_task_completion(client: AsyncClient) -> None:
     )
     assert patch_res2.status_code == 200
     assert patch_res2.json()["completed"] is False
+
+
+# ---------------------------------------------------------------------------
+# 17. Stats — empty user returns total_wins=0 and all zero counts
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_empty_user(client: AsyncClient) -> None:
+    res = await client.get("/api/v1/small-wins/stats")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total_wins"] == 0
+    assert len(body["wins_last_7_days"]) == 7
+    assert all(d["count"] == 0 for d in body["wins_last_7_days"])
+
+
+# ---------------------------------------------------------------------------
+# 18. Stats — 3 wins across different days gives total_wins=3
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_total_wins_accumulates(client: AsyncClient) -> None:
+    today = datetime.date.today()
+    for offset in range(3):
+        day = (today - datetime.timedelta(days=offset)).isoformat()
+        await client.post("/api/v1/small-wins/", json={"date": day, "text": f"Win {offset}"})
+
+    res = await client.get("/api/v1/small-wins/stats")
+    assert res.status_code == 200
+    assert res.json()["total_wins"] == 3
+
+
+# ---------------------------------------------------------------------------
+# 19. Stats — multiple wins same day all count towards total
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_total_wins_same_day(client: AsyncClient) -> None:
+    today = datetime.date.today().isoformat()
+    for i in range(4):
+        await client.post("/api/v1/small-wins/", json={"date": today, "text": f"Win {i}"})
+
+    res = await client.get("/api/v1/small-wins/stats")
+    assert res.status_code == 200
+    assert res.json()["total_wins"] == 4
+
+
+# ---------------------------------------------------------------------------
+# 20. Stats — completed task counts towards total
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_task_completed_counts(client: AsyncClient) -> None:
+    today = datetime.date.today().isoformat()
+    create_res = await client.post(
+        "/api/v1/small-wins/",
+        json={"date": today, "text": "Task", "entry_type": "task"},
+    )
+    task_id = create_res.json()["id"]
+    await client.patch(f"/api/v1/small-wins/{task_id}", json={"completed": True})
+
+    res = await client.get("/api/v1/small-wins/stats")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total_wins"] == 1
+    today_entry = body["wins_last_7_days"][-1]
+    assert today_entry["count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# 21. Stats — incomplete task does NOT count
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_pending_task_not_counted(client: AsyncClient) -> None:
+    today = datetime.date.today().isoformat()
+    await client.post(
+        "/api/v1/small-wins/",
+        json={"date": today, "text": "Pending task", "entry_type": "task"},
+    )
+    res = await client.get("/api/v1/small-wins/stats")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total_wins"] == 0
+    today_entry = body["wins_last_7_days"][-1]
+    assert today_entry["count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 22. Category stored and returned
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_category_stored_and_returned(client: AsyncClient) -> None:
+    res = await client.post(
+        "/api/v1/small-wins/",
+        json={"date": _TODAY, "text": "Hit the gym", "category": "Health"},
+    )
+    assert res.status_code == 201
+    body = res.json()
+    assert body["category"] == "Health"
+
+    # Verify it comes back in GET
+    get_res = await client.get(f"/api/v1/small-wins/?date={_TODAY}")
+    win = next(w for w in get_res.json() if w["id"] == body["id"])
+    assert win["category"] == "Health"

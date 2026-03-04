@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useCreateSmallWin } from "@/hooks/useSmallWins"
-import { getToday } from "@/lib/utils"
+import { getToday, cn } from "@/lib/utils"
+import type { SmallWinCategory } from "@/types/small-win"
 
 interface SmallWinFormProps {
   date: string
@@ -13,25 +15,36 @@ interface SmallWinFormProps {
 
 type Mode = "win" | "task"
 
+const CATEGORIES: SmallWinCategory[] = ["Work", "Health", "Personal Growth", "General"]
+
 export function SmallWinForm({ date }: SmallWinFormProps) {
   const isFuture = date > getToday()
   const [mode, setMode] = useState<Mode>(isFuture ? "task" : "win")
   const [text, setText] = useState("")
+  const [category, setCategory] = useState<SmallWinCategory | null>(null)
   const create = useCreateSmallWin()
 
   // Reset mode when navigating between dates
   useEffect(() => {
     setMode(isFuture ? "task" : "win")
     setText("")
+    setCategory(null)
   }, [date, isFuture])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!text.trim()) return
     try {
-      await create.mutateAsync({ date, text: text.trim(), entry_type: mode })
+      await create.mutateAsync({
+        date,
+        text: text.trim(),
+        entry_type: mode,
+        category: category ?? null,
+      })
       setText("")
+      setCategory(null)
     } catch (err) {
+      toast.error("Failed to log win")
       console.error("[SmallWinForm] submit failed:", err)
     }
   }
@@ -84,6 +97,25 @@ export function SmallWinForm({ date }: SmallWinFormProps) {
             disabled={create.isPending}
           />
         )}
+
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory((prev) => (prev === cat ? null : cat))}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                category === cat
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:border-foreground"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">{text.length}/500</span>

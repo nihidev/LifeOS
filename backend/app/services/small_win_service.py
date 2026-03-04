@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories import small_win_repository as repo
-from app.schemas.small_win import SmallWinCreate, SmallWinResponse, SmallWinUpdate
+from app.schemas.small_win import SmallWinCreate, SmallWinResponse, SmallWinStats, SmallWinUpdate
 
 
 async def create_win(
@@ -38,3 +38,8 @@ async def delete_win(
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Win not found")
     return {"message": "deleted"}
+
+
+async def get_stats(db: AsyncSession, user_id: UUID) -> SmallWinStats:
+    today = datetime.date.today()
+    return await repo.get_stats(db, user_id, today)
