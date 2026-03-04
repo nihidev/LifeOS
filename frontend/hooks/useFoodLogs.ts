@@ -3,13 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import type {
+  FoodDailySummaryResponse,
   FoodLogCreateInput,
   FoodLogResponse,
+  GenerateSummaryInput,
   WaterIntakeResponse,
 } from "@/types/food-log"
 
 const FOOD_KEY = "food-logs"
 const WATER_KEY = "water-intake"
+const SUMMARY_KEY = "food-daily-summary"
 
 export function useFoodLogs(date: string) {
   return useQuery<FoodLogResponse[]>({
@@ -67,6 +70,33 @@ export function useWaterDecrement() {
       api.post<WaterIntakeResponse>("/api/v1/food-logs/water/decrement", { date }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: [WATER_KEY, data.date] })
+    },
+  })
+}
+
+export function useDailySummary(date: string) {
+  return useQuery<FoodDailySummaryResponse | null>({
+    queryKey: [SUMMARY_KEY, date],
+    queryFn: async () => {
+      try {
+        return await api.get<FoodDailySummaryResponse>(
+          `/api/v1/food-logs/summary?date=${date}`
+        )
+      } catch {
+        return null
+      }
+    },
+    enabled: !!date,
+  })
+}
+
+export function useGenerateSummary() {
+  const qc = useQueryClient()
+  return useMutation<FoodDailySummaryResponse, Error, GenerateSummaryInput>({
+    mutationFn: (body) =>
+      api.post<FoodDailySummaryResponse>("/api/v1/food-logs/generate-summary", body),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: [SUMMARY_KEY, data.date] })
     },
   })
 }

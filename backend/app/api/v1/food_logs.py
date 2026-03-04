@@ -1,10 +1,17 @@
 import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.core.deps import CurrentUser, DB
-from app.schemas.food_log import FoodLogCreate, FoodLogResponse, WaterDateRequest, WaterIntakeResponse
+from app.schemas.food_log import (
+    FoodDailySummaryResponse,
+    FoodLogCreate,
+    FoodLogResponse,
+    GenerateSummaryInput,
+    WaterDateRequest,
+    WaterIntakeResponse,
+)
 from app.services import food_log_service as service
 
 router = APIRouter()
@@ -44,6 +51,31 @@ async def decrement_water(
     user_id: CurrentUser,
 ) -> WaterIntakeResponse:
     return await service.decrement_water(db, user_id, body.date)
+
+
+@router.get("/summary", response_model=FoodDailySummaryResponse)
+async def get_daily_summary(
+    date: datetime.date,
+    db: DB,
+    user_id: CurrentUser,
+) -> FoodDailySummaryResponse:
+    result = await service.get_daily_summary(db, user_id, date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No summary found for this date")
+    return result
+
+
+@router.post(
+    "/generate-summary",
+    response_model=FoodDailySummaryResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def generate_daily_summary(
+    body: GenerateSummaryInput,
+    db: DB,
+    user_id: CurrentUser,
+) -> FoodDailySummaryResponse:
+    return await service.generate_daily_summary(db, user_id, body.date)
 
 
 @router.get("/", response_model=list[FoodLogResponse])

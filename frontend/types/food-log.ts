@@ -17,3 +17,13 @@ export interface WaterIntakeResponse {
   date: string
   glasses: number
 }
+
+export interface FoodDailySummaryResponse {
+  date: string
+  summary: string
+  generated_at: string
+}
+
+export interface GenerateSummaryInput {
+  date: string
+}

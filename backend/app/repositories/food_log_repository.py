@@ -2,10 +2,10 @@ import datetime
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import func as sqlfunc
 
-from app.models.food_log import FoodLog, WaterIntake
+from app.models.food_log import FoodDailySummary, FoodLog, WaterIntake
 from app.schemas.food_log import FoodLogCreate
 
 
@@ -52,6 +52,32 @@ async def delete(db: AsyncSession, user_id: UUID, id: UUID) -> bool:
     await db.delete(entry)
     await db.flush()
     return True
+
+
+async def get_daily_summary(
+    db: AsyncSession, user_id: UUID, date: datetime.date
+) -> FoodDailySummary | None:
+    result = await db.execute(
+        select(FoodDailySummary).where(
+            FoodDailySummary.user_id == user_id, FoodDailySummary.date == date
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_daily_summary(
+    db: AsyncSession, user_id: UUID, date: datetime.date, summary: str
+) -> FoodDailySummary:
+    row = await get_daily_summary(db, user_id, date)
+    if row is None:
+        row = FoodDailySummary(user_id=user_id, date=date, summary=summary)
+        db.add(row)
+    else:
+        row.summary = summary
+        row.generated_at = sqlfunc.now()
+    await db.flush()
+    await db.refresh(row)
+    return row
 
 
 async def get_water(
