@@ -13,6 +13,7 @@ import {
 import { useAddExpense } from "@/hooks/useExpenses"
 import { EXPENSE_CATEGORIES } from "@/types/expense"
 import type { ExpenseCategory } from "@/types/expense"
+import { toast } from "sonner"
 
 interface ExpenseFormProps {
   date: string
@@ -41,7 +42,7 @@ export function ExpenseForm({ date }: ExpenseFormProps) {
       setCategory("")
       setNote("")
     } catch {
-      // error handled by React Query
+      toast.error("Failed to add expense")
     }
   }
 
@@ -60,11 +61,13 @@ export function ExpenseForm({ date }: ExpenseFormProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="pl-7"
+            disabled={add.isPending}
           />
         </div>
         <Select
           value={category}
           onValueChange={(v) => setCategory(v as ExpenseCategory)}
+          disabled={add.isPending}
         >
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Category" />
@@ -84,6 +87,7 @@ export function ExpenseForm({ date }: ExpenseFormProps) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           className="flex-1"
+          disabled={add.isPending}
         />
         <Button type="submit" disabled={!isValid || add.isPending}>
           Add
