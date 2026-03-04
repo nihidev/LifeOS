@@ -74,32 +74,24 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
 
 # ---------------------------------------------------------------------------
-# 1. POST creates log entry → 201, returns ai_comment (str or null)
+# 1. POST creates log entry → 201, ai_comment is null (no longer auto-generated)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_create_food_log_201(client: AsyncClient) -> None:
-    with patch(
-        "app.services.food_log_service._get_ai_comment",
-        new=AsyncMock(return_value="A great source of slow-release energy."),
-    ):
-        res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
+    res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
     assert res.status_code == 201
     body = res.json()
     assert body["food_item"] == "Oatmeal with berries"
     assert body["consumed_at"] == "08:30"
-    assert body["ai_comment"] == "A great source of slow-release energy."
+    assert body["ai_comment"] is None
 
 
 @pytest.mark.asyncio
 async def test_create_food_log_no_openai_key(client: AsyncClient) -> None:
-    """When no API key → ai_comment is null."""
-    with patch(
-        "app.services.food_log_service._get_ai_comment",
-        new=AsyncMock(return_value=None),
-    ):
-        res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
+    """ai_comment is always null now (per-item AI removed)."""
+    res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
     assert res.status_code == 201
     assert res.json()["ai_comment"] is None
 
@@ -124,12 +116,8 @@ async def test_invalid_time_format_422(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_logs_by_date(client: AsyncClient) -> None:
-    with patch(
-        "app.services.food_log_service._get_ai_comment",
-        new=AsyncMock(return_value=None),
-    ):
-        await client.post("/api/v1/food-logs/", json={**_VALID_LOG, "consumed_at": "12:00"})
-        await client.post("/api/v1/food-logs/", json={**_VALID_LOG, "consumed_at": "07:00"})
+    await client.post("/api/v1/food-logs/", json={**_VALID_LOG, "consumed_at": "12:00"})
+    await client.post("/api/v1/food-logs/", json={**_VALID_LOG, "consumed_at": "07:00"})
 
     res = await client.get(f"/api/v1/food-logs/?date={_TODAY}")
     assert res.status_code == 200
@@ -158,11 +146,7 @@ async def test_get_logs_empty_date(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_food_log(client: AsyncClient) -> None:
-    with patch(
-        "app.services.food_log_service._get_ai_comment",
-        new=AsyncMock(return_value=None),
-    ):
-        create_res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
+    create_res = await client.post("/api/v1/food-logs/", json=_VALID_LOG)
     entry_id = create_res.json()["id"]
 
     del_res = await client.delete(f"/api/v1/food-logs/{entry_id}")
@@ -243,11 +227,7 @@ async def test_water_decrement(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_cross_user_isolation(db_session: AsyncSession) -> None:
     async for client_a in _make_client(db_session, _USER_A):
-        with patch(
-            "app.services.food_log_service._get_ai_comment",
-            new=AsyncMock(return_value=None),
-        ):
-            await client_a.post("/api/v1/food-logs/", json=_VALID_LOG)
+        await client_a.post("/api/v1/food-logs/", json=_VALID_LOG)
         await client_a.post(
             "/api/v1/food-logs/water/increment", json={"date": _TODAY}
         )
@@ -258,3 +238,114 @@ async def test_cross_user_isolation(db_session: AsyncSession) -> None:
 
         water_res = await client_b.get(f"/api/v1/food-logs/water?date={_TODAY}")
         assert water_res.json()["glasses"] == 0
+
+
+# ---------------------------------------------------------------------------
+# 10. Daily summary: generate returns summary text
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_returns_summary(client: AsyncClient) -> None:
+    """Log 3 foods, generate summary → 200 with summary text."""
+    foods = [
+        {**_VALID_LOG, "food_item": "Chicken breast", "consumed_at": "12:00"},
+        {**_VALID_LOG, "food_item": "Brown rice", "consumed_at": "12:01"},
+        {**_VALID_LOG, "food_item": "Steamed broccoli", "consumed_at": "12:02"},
+    ]
+    for food in foods:
+        await client.post("/api/v1/food-logs/", json=food)
+
+    with patch(
+        "app.services.food_log_service._call_openai_summary",
+        new=AsyncMock(return_value="Great protein and carbs. Add more fruit."),
+    ):
+        res = await client.post(
+            "/api/v1/food-logs/generate-summary", json={"date": _TODAY}
+        )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["summary"] == "Great protein and carbs. Add more fruit."
+    assert body["date"] == _TODAY
+    assert "generated_at" in body
+
+
+# ---------------------------------------------------------------------------
+# 11. Daily summary: no food logged → 400
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_no_food_returns_400(client: AsyncClient) -> None:
+    res = await client.post(
+        "/api/v1/food-logs/generate-summary", json={"date": "2000-01-01"}
+    )
+    assert res.status_code == 400
+    assert "No food logged" in res.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# 12. Daily summary: GET returns cached version after generate
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_summary_cached(client: AsyncClient) -> None:
+    await client.post("/api/v1/food-logs/", json=_VALID_LOG)
+
+    with patch(
+        "app.services.food_log_service._call_openai_summary",
+        new=AsyncMock(return_value="Cached summary text."),
+    ):
+        await client.post(
+            "/api/v1/food-logs/generate-summary", json={"date": _TODAY}
+        )
+
+    res = await client.get(f"/api/v1/food-logs/summary?date={_TODAY}")
+    assert res.status_code == 200
+    assert res.json()["summary"] == "Cached summary text."
+
+
+# ---------------------------------------------------------------------------
+# 13. Daily summary: GET → 404 when no summary generated yet
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_summary_not_found(client: AsyncClient) -> None:
+    res = await client.get("/api/v1/food-logs/summary?date=2000-01-01")
+    assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 14. Daily summary: regenerate overwrites previous
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_regenerates(client: AsyncClient) -> None:
+    await client.post("/api/v1/food-logs/", json=_VALID_LOG)
+
+    with patch(
+        "app.services.food_log_service._call_openai_summary",
+        new=AsyncMock(return_value="First summary."),
+    ):
+        await client.post(
+            "/api/v1/food-logs/generate-summary", json={"date": _TODAY}
+        )
+
+    with patch(
+        "app.services.food_log_service._call_openai_summary",
+        new=AsyncMock(return_value="Updated summary."),
+    ):
+        res = await client.post(
+            "/api/v1/food-logs/generate-summary", json={"date": _TODAY}
+        )
+
+    assert res.status_code == 200
+    assert res.json()["summary"] == "Updated summary."
+
+    # GET also reflects the new value
+    get_res = await client.get(f"/api/v1/food-logs/summary?date={_TODAY}")
+    assert get_res.json()["summary"] == "Updated summary."

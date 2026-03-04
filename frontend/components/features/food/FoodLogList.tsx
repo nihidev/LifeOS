@@ -26,11 +26,6 @@ function FoodLogItem({ entry, date }: FoodLogItemProps) {
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium">{entry.food_item}</p>
-          {entry.ai_comment && (
-            <p className="text-xs text-muted-foreground mt-1 italic">
-              {entry.ai_comment}
-            </p>
-          )}
         </div>
         <Button
           size="icon"

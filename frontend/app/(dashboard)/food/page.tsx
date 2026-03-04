@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageWrapper } from "@/components/layout/PageWrapper"
+import { DailySummaryCard } from "@/components/features/food/DailySummaryCard"
 import { FoodLogForm } from "@/components/features/food/FoodLogForm"
 import { FoodLogList } from "@/components/features/food/FoodLogList"
 import { WaterCounter } from "@/components/features/food/WaterCounter"
@@ -91,6 +92,9 @@ export default function FoodPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Daily AI summary */}
+        <DailySummaryCard date={date} foodCount={entries.length} />
       </div>
     </PageWrapper>
   )
