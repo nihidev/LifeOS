@@ -154,3 +154,4 @@
 - **Skeleton** shadcn component must be installed separately: `npx shadcn@latest add skeleton`
 - **Expense category** validated server-side — must be one of the 7 predefined categories
 - **feat/* branches always rebased on main before merging** — router.py conflicts common when multiple phases add routes simultaneously
+- **SQLAlchemy async coverage**: add `[tool.coverage.run] concurrency = ["greenlet"]` to `pyproject.toml` — without it, coverage.py loses its tracer inside `await db.execute()` (SQLAlchemy uses greenlet internally), making async services appear at ~33% coverage even when fully tested. Fixed: 75% → 96%.
