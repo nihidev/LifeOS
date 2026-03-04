@@ -19,6 +19,7 @@ class Resolution(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="not_started")
     progress_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     target_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+    ai_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -28,6 +29,10 @@ class Resolution(Base):
 
     check_ins: Mapped[list["ResolutionCheckIn"]] = relationship(
         "ResolutionCheckIn", back_populates="resolution", lazy="selectin"
+    )
+    progress_logs: Mapped[list["ResolutionProgressLog"]] = relationship(
+        "ResolutionProgressLog", back_populates="resolution", lazy="selectin",
+        order_by="ResolutionProgressLog.logged_at.desc()",
     )
 
     __table_args__ = (Index("idx_resolutions_user", "user_id"),)
@@ -58,6 +63,25 @@ class ResolutionCheckIn(Base):
         CheckConstraint("rating >= 1 AND rating <= 5", name="ck_checkin_rating"),
         UniqueConstraint("resolution_id", "year", "month", name="uq_checkin_resolution_year_month"),
     )
+
+
+class ResolutionProgressLog(Base):
+    __tablename__ = "resolution_progress_logs"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    resolution_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("resolutions.id", ondelete="CASCADE"), nullable=False
+    )
+    progress_percent: Mapped[int] = mapped_column(Integer, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logged_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    resolution: Mapped["Resolution"] = relationship("Resolution", back_populates="progress_logs")
+
+    __table_args__ = (Index("idx_progress_logs_resolution", "resolution_id"),)
 
 
 class ResolutionAICache(Base):

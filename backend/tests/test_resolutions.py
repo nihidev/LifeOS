@@ -266,6 +266,200 @@ async def test_delete_other_user_resolution_404(db_session: AsyncSession) -> Non
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# 13. generate-plan returns plan when target_date is set
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generate_plan_returns_plan(client: AsyncClient) -> None:
+    import json
+
+    create_res = await client.post(
+        "/api/v1/resolutions/",
+        json={"title": "Read 12 books", "target_date": "2026-12-31"},
+    )
+    rid = create_res.json()["id"]
+
+    fake_plan = [
+        {"month_label": "March 2026", "goal": "Read first book", "actions": ["Pick a book", "Read 30 min/day"]},
+        {"month_label": "April 2026", "goal": "Read second book", "actions": ["Pick next book", "Read daily"]},
+    ]
+
+    mock_message = MagicMock()
+    mock_message.choices = [MagicMock()]
+    mock_message.choices[0].message.content = json.dumps(fake_plan)
+
+    mock_openai = AsyncMock()
+    mock_openai.chat.completions.create = AsyncMock(return_value=mock_message)
+
+    with (
+        patch("app.services.resolution_service.settings") as mock_settings,
+        patch("app.services.resolution_service.AsyncOpenAI", return_value=mock_openai),
+    ):
+        mock_settings.OPENAI_API_KEY = "sk-test"
+        res = await client.post(f"/api/v1/resolutions/{rid}/generate-plan")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ai_plan"] is not None
+    assert len(body["ai_plan"]) == 2
+    assert body["ai_plan"][0]["month_label"] == "March 2026"
+    assert isinstance(body["ai_plan"][0]["actions"], list)
+
+
+# ---------------------------------------------------------------------------
+# 14. generate-plan with no target_date → 400
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generate_plan_no_target_date_400(client: AsyncClient) -> None:
+    create_res = await client.post("/api/v1/resolutions/", json={"title": "Vague goal"})
+    rid = create_res.json()["id"]
+
+    with patch("app.services.resolution_service.settings") as mock_settings:
+        mock_settings.OPENAI_API_KEY = "sk-test"
+        res = await client.post(f"/api/v1/resolutions/{rid}/generate-plan")
+
+    assert res.status_code == 400
+    assert "target date" in res.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# 15. calculate-progress updates percent when plan + notes exist
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_calculate_progress_updates_percent(client: AsyncClient) -> None:
+    import json
+
+    create_res = await client.post(
+        "/api/v1/resolutions/",
+        json={"title": "Get fit", "target_date": "2026-12-31"},
+    )
+    rid = create_res.json()["id"]
+
+    # Seed ai_plan directly via patch on update
+    fake_plan = [
+        {"month_label": "March 2026", "goal": "Start exercising", "actions": ["Join gym"]},
+    ]
+
+    mock_message_plan = MagicMock()
+    mock_message_plan.choices = [MagicMock()]
+    mock_message_plan.choices[0].message.content = json.dumps(fake_plan)
+
+    mock_openai = AsyncMock()
+    mock_openai.chat.completions.create = AsyncMock(return_value=mock_message_plan)
+
+    with (
+        patch("app.services.resolution_service.settings") as mock_settings,
+        patch("app.services.resolution_service.AsyncOpenAI", return_value=mock_openai),
+    ):
+        mock_settings.OPENAI_API_KEY = "sk-test"
+        await client.post(f"/api/v1/resolutions/{rid}/generate-plan")
+
+    # Add check-ins with notes
+    await client.post(
+        f"/api/v1/resolutions/{rid}/check-ins",
+        json={"year": 2026, "month": 3, "rating": 4, "note": "Joined gym and went 3x/week"},
+    )
+
+    # Now calculate progress (mock second openai call)
+    mock_message_progress = MagicMock()
+    mock_message_progress.choices = [MagicMock()]
+    mock_message_progress.choices[0].message.content = json.dumps({"percentage": 40, "reasoning": "Good start"})
+
+    mock_openai2 = AsyncMock()
+    mock_openai2.chat.completions.create = AsyncMock(return_value=mock_message_progress)
+
+    with (
+        patch("app.services.resolution_service.settings") as mock_settings2,
+        patch("app.services.resolution_service.AsyncOpenAI", return_value=mock_openai2),
+    ):
+        mock_settings2.OPENAI_API_KEY = "sk-test"
+        res = await client.post(f"/api/v1/resolutions/{rid}/calculate-progress")
+
+    assert res.status_code == 200
+    assert res.json()["progress_percent"] == 40
+
+
+# ---------------------------------------------------------------------------
+# 16. calculate-progress with no plan → 400
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_calculate_progress_no_plan_400(client: AsyncClient) -> None:
+    create_res = await client.post("/api/v1/resolutions/", json={"title": "No plan goal"})
+    rid = create_res.json()["id"]
+
+    with patch("app.services.resolution_service.settings") as mock_settings:
+        mock_settings.OPENAI_API_KEY = "sk-test"
+        res = await client.post(f"/api/v1/resolutions/{rid}/calculate-progress")
+
+    assert res.status_code == 400
+    assert "plan" in res.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# 17. calculate-progress with plan but no notes → progress=0, no AI call
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_calculate_progress_no_notes_returns_zero(client: AsyncClient) -> None:
+    import json
+
+    create_res = await client.post(
+        "/api/v1/resolutions/",
+        json={"title": "Silent goal", "target_date": "2026-12-31"},
+    )
+    rid = create_res.json()["id"]
+
+    # Seed plan
+    fake_plan = [{"month_label": "March 2026", "goal": "Start", "actions": ["Do it"]}]
+    mock_message_plan = MagicMock()
+    mock_message_plan.choices = [MagicMock()]
+    mock_message_plan.choices[0].message.content = json.dumps(fake_plan)
+
+    mock_openai = AsyncMock()
+    mock_openai.chat.completions.create = AsyncMock(return_value=mock_message_plan)
+
+    with (
+        patch("app.services.resolution_service.settings") as mock_settings,
+        patch("app.services.resolution_service.AsyncOpenAI", return_value=mock_openai),
+    ):
+        mock_settings.OPENAI_API_KEY = "sk-test"
+        await client.post(f"/api/v1/resolutions/{rid}/generate-plan")
+
+    # Check-in without note
+    await client.post(
+        f"/api/v1/resolutions/{rid}/check-ins",
+        json={"year": 2026, "month": 3, "rating": 3},
+    )
+
+    # calculate-progress — should return 0 without calling OpenAI
+    mock_openai2 = AsyncMock()
+
+    with (
+        patch("app.services.resolution_service.settings") as mock_settings2,
+        patch("app.services.resolution_service.AsyncOpenAI", return_value=mock_openai2),
+    ):
+        mock_settings2.OPENAI_API_KEY = "sk-test"
+        res = await client.post(f"/api/v1/resolutions/{rid}/calculate-progress")
+
+    assert res.status_code == 200
+    assert res.json()["progress_percent"] == 0
+    mock_openai2.chat.completions.create.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 12. GET /analysis returns valid structure (monkeypatched OpenAI)
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
 async def test_get_analysis_returns_structure(
     client: AsyncClient, db_session: AsyncSession

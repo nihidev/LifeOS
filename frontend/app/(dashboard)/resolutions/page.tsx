@@ -6,7 +6,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { ResolutionForm } from "@/components/features/resolutions/ResolutionForm"
 import { ResolutionCard } from "@/components/features/resolutions/ResolutionCard"
 import { CheckInModal } from "@/components/features/resolutions/CheckInModal"
-import { useResolutions, useAIAnalysis } from "@/hooks/useResolutions"
+import { useResolutions } from "@/hooks/useResolutions"
 import type { ResolutionStatus } from "@/types/resolution"
 
 type FilterValue = "all" | ResolutionStatus
@@ -30,11 +30,6 @@ export default function ResolutionsPage() {
 
   const statusParam = filter === "all" ? undefined : filter
   const { data: resolutions = [], isLoading } = useResolutions(statusParam)
-  const { data: analysis, isLoading: analysisLoading } = useAIAnalysis()
-
-  const analysisMap = new Map(
-    (analysis?.analyses ?? []).map((item) => [item.resolution_id, item])
-  )
 
   return (
     <PageWrapper>
@@ -86,8 +81,6 @@ export default function ResolutionsPage() {
               <ResolutionCard
                 key={r.id}
                 resolution={r}
-                analysisItem={analysisMap.get(r.id)}
-                analysisLoading={analysisLoading}
                 onClickMonth={(resolutionId, year, month) =>
                   setCheckInTarget({ resolutionId, year, month })
                 }
@@ -103,6 +96,7 @@ export default function ResolutionsPage() {
           resolutionId={checkInTarget.resolutionId}
           year={checkInTarget.year}
           month={checkInTarget.month}
+          aiPlan={resolutions.find((r) => r.id === checkInTarget.resolutionId)?.ai_plan ?? null}
           onClose={() => setCheckInTarget(null)}
         />
       )}

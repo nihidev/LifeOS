@@ -6,6 +6,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 VALID_STATUSES = ["not_started", "in_progress", "completed"]
 
 
+class AIPlanMonth(BaseModel):
+    month_label: str
+    goal: str
+    actions: list[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ResolutionCreate(BaseModel):
     title: str = Field(min_length=1)
     description: str | None = None
@@ -18,6 +26,7 @@ class ResolutionUpdate(BaseModel):
     status: str | None = None
     progress_percent: int | None = Field(None, ge=0, le=100)
     target_date: date | None = None
+    ai_plan: list[dict] | None = None
 
     @field_validator("status")
     @classmethod
@@ -25,6 +34,20 @@ class ResolutionUpdate(BaseModel):
         if v is not None and v not in VALID_STATUSES:
             raise ValueError(f"status must be one of {VALID_STATUSES}")
         return v
+
+
+class ProgressLogCreate(BaseModel):
+    progress_percent: int = Field(ge=0, le=100)
+    note: str | None = None
+
+
+class ProgressLogResponse(BaseModel):
+    id: UUID
+    progress_percent: int
+    note: str | None
+    logged_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CheckInCreate(BaseModel):
@@ -54,9 +77,11 @@ class ResolutionResponse(BaseModel):
     status: str
     progress_percent: int
     target_date: date | None
+    ai_plan: list[AIPlanMonth] | None = None
     created_at: datetime
     updated_at: datetime
     check_ins: list[CheckInResponse] = []
+    progress_logs: list[ProgressLogResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 

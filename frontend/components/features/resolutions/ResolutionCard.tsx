@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, X, Check, Trash2 } from "lucide-react"
+import { Pencil, X, Check, Trash2, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -17,9 +17,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { MonthHeatmap } from "./MonthHeatmap"
-import { AIAnalysisCard, AIAnalysisCardSkeleton } from "./AIAnalysisCard"
-import { useUpdateResolution, useDeleteResolution } from "@/hooks/useResolutions"
-import type { AIAnalysisItem, ResolutionResponse, ResolutionStatus } from "@/types/resolution"
+import { MonthlyPlanView } from "./MonthlyPlanView"
+import { LogProgressModal } from "./LogProgressModal"
+import { ProgressHistory } from "./ProgressHistory"
+import { useUpdateResolution, useDeleteResolution, useCalculateProgress } from "@/hooks/useResolutions"
+import { toast } from "sonner"
+import type { ResolutionResponse, ResolutionStatus } from "@/types/resolution"
 
 function statusBadge(status: ResolutionStatus) {
   switch (status) {
@@ -34,15 +37,11 @@ function statusBadge(status: ResolutionStatus) {
 
 interface ResolutionCardProps {
   resolution: ResolutionResponse
-  analysisItem?: AIAnalysisItem
-  analysisLoading?: boolean
   onClickMonth: (resolutionId: string, year: number, month: number) => void
 }
 
 export function ResolutionCard({
   resolution,
-  analysisItem,
-  analysisLoading,
   onClickMonth,
 }: ResolutionCardProps) {
   const [editing, setEditing] = useState(false)
@@ -50,11 +49,12 @@ export function ResolutionCard({
   const [title, setTitle] = useState(resolution.title)
   const [description, setDescription] = useState(resolution.description ?? "")
   const [status, setStatus] = useState<ResolutionStatus>(resolution.status)
-  const [progress, setProgress] = useState(String(resolution.progress_percent))
   const [targetDate, setTargetDate] = useState(resolution.target_date ?? "")
+  const [loggingProgress, setLoggingProgress] = useState(false)
 
   const { mutateAsync, isPending } = useUpdateResolution()
   const { mutateAsync: deleteResolution, isPending: isDeleting } = useDeleteResolution()
+  const { mutateAsync: calcProgress, isPending: isCalcPending } = useCalculateProgress()
 
   async function handleSave() {
     try {
@@ -64,7 +64,6 @@ export function ResolutionCard({
           title: title.trim() || undefined,
           description: description.trim() || undefined,
           status,
-          progress_percent: Number(progress),
           target_date: targetDate || undefined,
         },
       })
@@ -78,10 +77,10 @@ export function ResolutionCard({
     setTitle(resolution.title)
     setDescription(resolution.description ?? "")
     setStatus(resolution.status)
-    setProgress(String(resolution.progress_percent))
     setTargetDate(resolution.target_date ?? "")
     setEditing(false)
   }
+
 
   return (
     <Card>
@@ -149,17 +148,6 @@ export function ResolutionCard({
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-muted-foreground">Progress %</label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={progress}
-                  onChange={(e) => setProgress(e.target.value)}
-                  className="h-8 w-20 text-sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Target date</label>
                 <Input
                   type="date"
@@ -177,10 +165,42 @@ export function ResolutionCard({
         {/* Progress bar */}
         <div className="flex items-center gap-2">
           <Progress value={resolution.progress_percent} className="flex-1 h-2" />
-          <span className="text-xs text-muted-foreground w-8 text-right">
+          <button
+            className="text-xs text-muted-foreground w-8 text-right hover:text-foreground hover:underline transition-colors"
+            title="Click to log progress"
+            onClick={() => setLoggingProgress(true)}
+          >
             {resolution.progress_percent}%
-          </span>
+          </button>
+          {resolution.ai_plan && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              disabled={isCalcPending}
+              onClick={async () => {
+                try {
+                  await calcProgress(resolution.id)
+                } catch {
+                  toast.error("Failed to recalculate progress")
+                }
+              }}
+              title="AI recalculate"
+            >
+              <RefreshCw className={`h-3 w-3 ${isCalcPending ? "animate-spin" : ""}`} />
+            </Button>
+          )}
         </div>
+
+        {/* Progress history */}
+        <ProgressHistory logs={resolution.progress_logs} />
+
+        {/* AI Monthly Plan */}
+        <MonthlyPlanView
+          resolutionId={resolution.id}
+          hasTargetDate={!!resolution.target_date}
+          plan={resolution.ai_plan}
+        />
 
         {/* Month heatmap */}
         <MonthHeatmap
@@ -188,12 +208,6 @@ export function ResolutionCard({
           onClickMonth={(year, month) => onClickMonth(resolution.id, year, month)}
         />
 
-        {/* AI analysis */}
-        {analysisLoading ? (
-          <AIAnalysisCardSkeleton />
-        ) : analysisItem ? (
-          <AIAnalysisCard item={analysisItem} />
-        ) : null}
       </CardContent>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
@@ -224,6 +238,14 @@ export function ResolutionCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {loggingProgress && (
+        <LogProgressModal
+          resolutionId={resolution.id}
+          currentPercent={resolution.progress_percent}
+          onClose={() => setLoggingProgress(false)}
+        />
+      )}
     </Card>
   )
 }
