@@ -5,7 +5,13 @@ import { useSmallWinStats } from "@/hooks/useSmallWins"
 import { cn } from "@/lib/utils"
 import { getToday } from "@/lib/utils"
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"]
+// Indexed by getDay(): 0=Sun,1=Mon,...,6=Sat
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]
+
+function dayLabel(dateStr: string): string {
+  // Use T12:00:00 to avoid UTC-offset shifting the date to the previous day
+  return DAY_LETTERS[new Date(dateStr + "T12:00:00").getDay()]
+}
 
 const MILESTONES = [10, 25, 50, 100, 250, 500, 1000]
 
@@ -83,7 +89,7 @@ export function WinStreakBanner() {
                 title={`${day.date}: ${day.count} win${day.count === 1 ? "" : "s"}`}
               />
               <span className="text-[10px] text-muted-foreground leading-none">
-                {DAY_LABELS[i]}
+                {dayLabel(day.date)}
               </span>
             </div>
           )

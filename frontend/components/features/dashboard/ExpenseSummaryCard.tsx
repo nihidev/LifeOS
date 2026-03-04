@@ -18,14 +18,14 @@ export function ExpenseSummaryCard({ total, summary }: Props) {
         <CreditCard className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">${parseFloat(total).toFixed(2)}</div>
+        <div className="text-3xl font-bold">€{parseFloat(total).toFixed(2)}</div>
         <p className="text-xs text-muted-foreground mt-1">This month</p>
         {entries.length > 0 && (
           <ul className="mt-3 space-y-1">
             {entries.slice(0, 3).map(([cat, amt]) => (
               <li key={cat} className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{cat}</span>
-                <span className="font-medium">${parseFloat(amt).toFixed(2)}</span>
+                <span className="font-medium">€{parseFloat(amt).toFixed(2)}</span>
               </li>
             ))}
           </ul>

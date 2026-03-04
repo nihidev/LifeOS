@@ -1,6 +1,19 @@
 export type ResolutionStatus = "not_started" | "in_progress" | "completed"
 export type AISignal = "on_track" | "at_risk" | "no_signal"
 
+export interface AIPlanMonth {
+  month_label: string
+  goal: string
+  actions: string[]
+}
+
+export interface ProgressLogResponse {
+  id: string
+  progress_percent: number
+  note: string | null
+  logged_at: string
+}
+
 export interface CheckInResponse {
   id: string
   resolution_id: string
@@ -19,9 +32,11 @@ export interface ResolutionResponse {
   status: ResolutionStatus
   progress_percent: number
   target_date: string | null
+  ai_plan: AIPlanMonth[] | null
   created_at: string
   updated_at: string
   check_ins: CheckInResponse[]
+  progress_logs: ProgressLogResponse[]
 }
 
 export interface CheckInCreateInput {

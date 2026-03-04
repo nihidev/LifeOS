@@ -5,6 +5,7 @@ import { api } from "@/lib/api"
 import type {
   AIAnalysisResponse,
   CheckInCreateInput,
+  ProgressLogResponse,
   ResolutionCreateInput,
   ResolutionResponse,
   ResolutionUpdateInput,
@@ -67,6 +68,37 @@ export function useDeleteResolution() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => api.delete(`/api/v1/resolutions/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] })
+    },
+  })
+}
+
+export function useLogProgress() {
+  const qc = useQueryClient()
+  return useMutation<ProgressLogResponse, Error, { id: string; progress_percent: number; note?: string }>({
+    mutationFn: ({ id, ...body }) =>
+      api.post<ProgressLogResponse>(`/api/v1/resolutions/${id}/progress-logs`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] })
+    },
+  })
+}
+
+export function useGeneratePlan() {
+  const qc = useQueryClient()
+  return useMutation<ResolutionResponse, Error, string>({
+    mutationFn: (id) => api.post<ResolutionResponse>(`/api/v1/resolutions/${id}/generate-plan`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] })
+    },
+  })
+}
+
+export function useCalculateProgress() {
+  const qc = useQueryClient()
+  return useMutation<ResolutionResponse, Error, string>({
+    mutationFn: (id) => api.post<ResolutionResponse>(`/api/v1/resolutions/${id}/calculate-progress`, {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [KEY] })
     },

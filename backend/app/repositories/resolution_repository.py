@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.resolution import Resolution, ResolutionAICache, ResolutionCheckIn
-from app.schemas.resolution import CheckInCreate, ResolutionCreate, ResolutionUpdate
+from app.models.resolution import Resolution, ResolutionAICache, ResolutionCheckIn, ResolutionProgressLog
+from app.schemas.resolution import CheckInCreate, ProgressLogCreate, ResolutionCreate, ResolutionUpdate
 
 
 async def create(db: AsyncSession, user_id: UUID, data: ResolutionCreate) -> Resolution:
@@ -56,6 +56,8 @@ async def update(
         resolution.progress_percent = data.progress_percent
     if data.target_date is not None:
         resolution.target_date = data.target_date
+    if data.ai_plan is not None:
+        resolution.ai_plan = data.ai_plan
     await db.flush()
     await db.refresh(resolution)
     return resolution
@@ -93,6 +95,21 @@ async def upsert_check_in(
     await db.flush()
     await db.refresh(check_in)
     return check_in
+
+
+async def create_progress_log(
+    db: AsyncSession, user_id: UUID, resolution_id: UUID, data: ProgressLogCreate
+) -> ResolutionProgressLog:
+    log = ResolutionProgressLog(
+        user_id=user_id,
+        resolution_id=resolution_id,
+        progress_percent=data.progress_percent,
+        note=data.note,
+    )
+    db.add(log)
+    await db.flush()
+    await db.refresh(log)
+    return log
 
 
 async def delete(db: AsyncSession, user_id: UUID, id: UUID) -> bool:

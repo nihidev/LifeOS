@@ -7,6 +7,8 @@ from app.schemas.resolution import (
     AIAnalysisResponse,
     CheckInCreate,
     CheckInResponse,
+    ProgressLogCreate,
+    ProgressLogResponse,
     ResolutionCreate,
     ResolutionResponse,
     ResolutionUpdate,
@@ -59,6 +61,34 @@ async def delete_resolution(
     user_id: CurrentUser,
 ) -> None:
     await service.delete_resolution(db, user_id, id)
+
+
+@router.post("/{id}/progress-logs", response_model=ProgressLogResponse, status_code=status.HTTP_201_CREATED)
+async def log_progress(
+    id: UUID,
+    body: ProgressLogCreate,
+    db: DB,
+    user_id: CurrentUser,
+) -> ProgressLogResponse:
+    return await service.log_progress(db, user_id, id, body)
+
+
+@router.post("/{id}/generate-plan", response_model=ResolutionResponse)
+async def generate_plan(
+    id: UUID,
+    db: DB,
+    user_id: CurrentUser,
+) -> ResolutionResponse:
+    return await service.generate_plan(db, user_id, id)
+
+
+@router.post("/{id}/calculate-progress", response_model=ResolutionResponse)
+async def calculate_progress(
+    id: UUID,
+    db: DB,
+    user_id: CurrentUser,
+) -> ResolutionResponse:
+    return await service.calculate_progress(db, user_id, id)
 
 
 @router.post("/{id}/check-ins", response_model=CheckInResponse)
