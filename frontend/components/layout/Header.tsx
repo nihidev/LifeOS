@@ -1,5 +1,6 @@
 "use client"
 
+import { Menu } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 
@@ -14,16 +15,27 @@ const routeTitles: Record<string, string> = {
   "/grocery": "Grocery List",
 }
 
-export function Header() {
+interface HeaderProps {
+  onMenuToggle: () => void
+}
+
+export function Header({ onMenuToggle }: HeaderProps) {
   const pathname = usePathname()
   const title = routeTitles[pathname] ?? "LifeOS"
   const today = formatDate(new Date())
 
   return (
-    <header className="flex items-center justify-between border-b px-6 py-4">
+    <header className="safe-top flex items-center gap-3 border-b bg-background px-4 py-3 md:px-6 md:py-4">
+      <button
+        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent md:hidden"
+        onClick={onMenuToggle}
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
       <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="text-sm text-muted-foreground">{today}</p>
+        <h2 className="text-lg font-semibold leading-tight">{title}</h2>
+        <p className="text-xs text-muted-foreground">{today}</p>
       </div>
     </header>
   )
